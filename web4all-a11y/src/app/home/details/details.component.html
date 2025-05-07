@@ -1,0 +1,38 @@
+<article class="details-content" aria-labelledby="details-title">
+  <h2 id="details-title">Detailed Information</h2>
+  <div class="detail-sections">
+    <section class="detail-section" aria-labelledby="section1-title">
+      <h3 id="section1-title">Section 1</h3>
+      <p>Detailed information about our primary services and features.</p>
+      <div class="more-info">
+        <button 
+          class="expand-button" 
+          aria-expanded="false" 
+          (click)="toggleSection(1)" 
+          (keydown)="onKeydown($event)">
+          Learn more
+        </button>
+        <div class="expanded-content" role="region" aria-hidden="true">
+          Additional details about our primary services that you can explore.
+        </div>
+      </div>
+    </section>
+
+    <section class="detail-section" aria-labelledby="section2-title">
+      <h3 id="section2-title">Section 2</h3>
+      <p>Additional details about our secondary features and capabilities.</p>
+      <div class="more-info">
+        <button 
+          class="expand-button" 
+          aria-expanded="false" 
+          (click)="toggleSection(2)"
+          (keydown)="onKeydown($event)">
+          Learn more
+        </button>
+        <div class="expanded-content" role="region" aria-hidden="true">
+          More information about our secondary features and how they benefit you.
+        </div>
+      </div>
+    </section>
+  </div>
+</article>

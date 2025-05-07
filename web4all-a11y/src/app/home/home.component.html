@@ -1,0 +1,16 @@
+<div class="home-container">
+  <h1 id="home-title">Welcome Home</h1>
+  <nav class="sub-nav" aria-label="Home section navigation">
+    <ul role="menubar">
+      <li role="none">
+        <a role="menuitem" routerLink="overview" routerLinkActive="active" aria-current="page" tabindex="0">Overview</a>
+      </li>
+      <li role="none">
+        <a role="menuitem" routerLink="details" routerLinkActive="active" tabindex="0">Details</a>
+      </li>
+    </ul>
+  </nav>
+  <main id="main-content" role="main" aria-labelledby="home-title">
+    <router-outlet></router-outlet>
+  </main>
+</div>

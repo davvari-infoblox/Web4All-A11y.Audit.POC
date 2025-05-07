@@ -1,0 +1,51 @@
+<article class="team-content" aria-labelledby="team-title">
+  <h2 id="team-title">Our Team</h2>
+  <p>Meet the talented individuals who make our success possible.</p>
+  <div class="team-members" role="list" aria-label="Team members">
+    <div role="listitem" class="team-member" tabindex="0">
+      <div class="member-info">
+        <h3 id="member1-name">John Doe</h3>
+        <p class="position" aria-labelledby="member1-name">Chief Executive Officer</p>
+        <p class="description">Leading our company's vision and strategy.</p>
+        <button class="contact-button" 
+                aria-label="Contact John Doe"
+                (click)="contactMember('john.doe@example.com')"
+                (keydown)="onKeydown($event)">
+          Contact
+        </button>
+      </div>
+    </div>
+
+    <div role="listitem" class="team-member" tabindex="0">
+      <div class="member-info">
+        <h3 id="member2-name">Jane Smith</h3>
+        <p class="position" aria-labelledby="member2-name">Chief Technology Officer</p>
+        <p class="description">Driving innovation and technical excellence.</p>
+        <button class="contact-button"
+                aria-label="Contact Jane Smith"
+                (click)="contactMember('jane.smith@example.com')"
+                (keydown)="onKeydown($event)">
+          Contact
+        </button>
+      </div>
+    </div>
+
+    <div role="listitem" class="team-member" tabindex="0">
+      <div class="member-info">
+        <h3 id="member3-name">Mike Johnson</h3>
+        <p class="position" aria-labelledby="member3-name">Head of Design</p>
+        <p class="description">Creating beautiful and intuitive user experiences.</p>
+        <button class="contact-button"
+                aria-label="Contact Mike Johnson"
+                (click)="contactMember('mike.johnson@example.com')"
+                (keydown)="onKeydown($event)">
+          Contact
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="contact-message" role="status" aria-live="polite" class="contact-message">
+    {{ contactMessage }}
+  </div>
+</article>

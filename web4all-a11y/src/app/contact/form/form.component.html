@@ -1,0 +1,101 @@
+<p>form works!</p>
+<div class="form-content" appFocusTrap>
+  <h2 id="contact-form-title">Contact Form</h2>
+  <p id="form-description" class="form-intro">Please fill out the form below to get in touch with us. All fields marked with an asterisk (*) are required.</p>
+  
+  <form (ngSubmit)="onSubmit()" 
+        #contactForm="ngForm" 
+        role="form" 
+        aria-labelledby="contact-form-title"
+        aria-describedby="form-description"
+        (keydown)="onKeydown($event)">
+        
+    <div class="form-group">
+      <label for="name" id="name-label">
+        Name<span class="required" aria-hidden="true">*</span>
+        <span class="visually-hidden">required</span>
+      </label>
+      <input type="text" 
+             id="name" 
+             name="name" 
+             [(ngModel)]="formData.name" 
+             required
+             #nameInput="ngModel"
+             aria-required="true"
+             aria-describedby="name-error"
+             [class.error]="nameInput.invalid && (nameInput.dirty || nameInput.touched)"
+             autocomplete="name">
+      <div id="name-error" 
+           class="error-message" 
+           role="alert" 
+           *ngIf="nameInput.invalid && (nameInput.dirty || nameInput.touched)">
+        <span class="visually-hidden">Error: </span>Please enter your name
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="email" id="email-label">
+        Email<span class="required" aria-hidden="true">*</span>
+        <span class="visually-hidden">required</span>
+      </label>
+      <input type="email" 
+             id="email" 
+             name="email" 
+             [(ngModel)]="formData.email" 
+             required
+             email
+             #emailInput="ngModel"
+             aria-required="true"
+             aria-describedby="email-error"
+             [class.error]="emailInput.invalid && (emailInput.dirty || emailInput.touched)"
+             autocomplete="email">
+      <div id="email-error" 
+           class="error-message" 
+           role="alert" 
+           *ngIf="emailInput.invalid && (emailInput.dirty || emailInput.touched)">
+        <span class="visually-hidden">Error: </span>
+        <span *ngIf="emailInput.errors?.['required']">Please enter your email address</span>
+        <span *ngIf="emailInput.errors?.['email']">Please enter a valid email address</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="message" id="message-label">
+        Message<span class="required" aria-hidden="true">*</span>
+        <span class="visually-hidden">required</span>
+      </label>
+      <textarea id="message" 
+                name="message" 
+                [(ngModel)]="formData.message" 
+                required
+                #messageInput="ngModel"
+                aria-required="true"
+                aria-describedby="message-error"
+                [class.error]="messageInput.invalid && (messageInput.dirty || messageInput.touched)"
+                rows="4"></textarea>
+      <div id="message-error" 
+           class="error-message" 
+           role="alert" 
+           *ngIf="messageInput.invalid && (messageInput.dirty || messageInput.touched)">
+        <span class="visually-hidden">Error: </span>Please enter your message
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" 
+              [disabled]="!contactForm.form.valid"
+              [attr.aria-disabled]="!contactForm.form.valid"
+              aria-label="Submit contact form">
+        Send Message
+      </button>
+    </div>
+
+    <div class="form-feedback" 
+         role="status" 
+         aria-live="polite" 
+         [class.success]="formSubmitted && contactForm.form.valid"
+         [class.error]="formSubmitted && !contactForm.form.valid">
+      {{ submitMessage }}
+    </div>
+  </form>
+</div>

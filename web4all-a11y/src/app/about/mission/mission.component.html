@@ -1,0 +1,51 @@
+<article class="mission-content" aria-labelledby="mission-title">
+  <h2 id="mission-title">Our Mission</h2>
+  <p class="mission-statement">We strive to create innovative solutions that make a difference in people's lives.</p>
+  
+  <section class="mission-points" aria-labelledby="values-title">
+    <h3 id="values-title">Core Values</h3>
+    <ul role="list" aria-label="Our core values">
+      <li role="listitem">
+        <div class="value-item" tabindex="0">
+          <h4>Innovation and Excellence</h4>
+          <p>Pushing boundaries and maintaining the highest standards in everything we do.</p>
+        </div>
+      </li>
+      <li role="listitem">
+        <div class="value-item" tabindex="0">
+          <h4>Customer Satisfaction</h4>
+          <p>Putting our customers first and exceeding their expectations.</p>
+        </div>
+      </li>
+      <li role="listitem">
+        <div class="value-item" tabindex="0">
+          <h4>Sustainability</h4>
+          <p>Committed to environmental responsibility and sustainable practices.</p>
+        </div>
+      </li>
+      <li role="listitem">
+        <div class="value-item" tabindex="0">
+          <h4>Continuous Improvement</h4>
+          <p>Always learning and evolving to better serve our community.</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="mission-vision" aria-labelledby="vision-title">
+    <h3 id="vision-title">Vision</h3>
+    <p>To become a leading force in technological advancement while maintaining our commitment to social responsibility.</p>
+    <button class="learn-more-btn" 
+            aria-expanded="false"
+            (click)="toggleVisionDetails()"
+            (keydown)="onKeydown($event)">
+      Learn more about our vision
+    </button>
+    <div class="vision-details" 
+         role="region" 
+         aria-hidden="true"
+         [attr.aria-expanded]="visionExpanded">
+      <p>Our long-term vision encompasses creating sustainable technology solutions that benefit both businesses and communities, while fostering an inclusive and innovative environment for our team members.</p>
+    </div>
+  </section>
+</article>

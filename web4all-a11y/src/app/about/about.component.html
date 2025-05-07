@@ -1,0 +1,18 @@
+<div class="about-container">
+  <h1 id="about-title">About Us</h1>
+  <nav class="sub-nav" aria-label="About section navigation">
+    <ul role="menubar">
+      <li role="none">
+        <a role="menuitem" routerLink="mission" routerLinkActive="active" tabindex="0" 
+           aria-label="Our Mission">Our Mission</a>
+      </li>
+      <li role="none">
+        <a role="menuitem" routerLink="team" routerLinkActive="active" tabindex="0"
+           aria-label="Our Team">Our Team</a>
+      </li>
+    </ul>
+  </nav>
+  <main id="about-content" role="main" aria-labelledby="about-title">
+    <router-outlet></router-outlet>
+  </main>
+</div>

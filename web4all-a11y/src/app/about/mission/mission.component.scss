@@ -1,0 +1,127 @@
+.mission-content {
+  .mission-points {
+    margin: 25px 0;
+    
+    ul {
+      list-style-type: none;
+      padding: 0;
+      
+      li {
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+        color: #555;
+        
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+    }
+  }
+
+  .mission-statement {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    color: var(--text-color);
+    margin-bottom: 2rem;
+  }
+
+  .value-item {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+
+    &:focus {
+      outline: 3px solid var(--focus-outline-color);
+      outline-offset: 2px;
+      transform: translateY(-2px);
+    }
+
+    h4 {
+      color: var(--primary-color);
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+
+    p {
+      margin: 0;
+      color: var(--text-color);
+    }
+  }
+
+  .mission-vision {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+
+    h3 {
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+    }
+  }
+
+  .learn-more-btn {
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background-color: darken(#1a5fb4, 10%);
+    }
+
+    &:focus {
+      outline: 3px solid var(--focus-outline-color);
+      outline-offset: 2px;
+    }
+
+    &[aria-expanded="true"] {
+      background-color: darken(#1a5fb4, 15%);
+    }
+  }
+
+  .vision-details {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    opacity: 0;
+
+    &[aria-hidden="false"] {
+      max-height: 500px;
+      opacity: 1;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  /* Support for reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .value-item,
+    .vision-details {
+      transition: none;
+    }
+  }
+
+  /* High contrast mode adjustments */
+  @media (prefers-contrast: more) {
+    .value-item,
+    .mission-vision {
+      border: 2px solid var(--text-color);
+      background-color: var(--background-color);
+    }
+
+    .learn-more-btn {
+      border: 2px solid currentColor;
+    }
+  }
+}
