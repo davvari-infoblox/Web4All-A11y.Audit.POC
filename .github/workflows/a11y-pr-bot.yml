@@ -73,3 +73,11 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
           PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
         run: node scripts/audit-pr.js
+
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: accessibility-audit-reports
+          path: audit-reports/
+          retention-days: 90
