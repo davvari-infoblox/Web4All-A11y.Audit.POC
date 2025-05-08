@@ -14,6 +14,10 @@ permissions:
 jobs:
   audit:
     runs-on: ubuntu-latest
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
+      PUPPETEER_ARGS: '--no-sandbox --disable-setuid-sandbox'
 
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +38,7 @@ jobs:
         run: |
           npm ci || npm install
           npm install -g @angular/cli
-          npm install puppeteer axe-core @octokit/rest openai
+          npm install puppeteer axe-core @octokit/rest openai dotenv
 
       - name: Install Chrome dependencies
         run: |
@@ -61,7 +65,9 @@ jobs:
 
       - name: Run accessibility audit
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          API_VERSION: 2025-01-01-preview
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
