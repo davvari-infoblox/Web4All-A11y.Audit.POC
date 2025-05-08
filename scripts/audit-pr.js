@@ -1,15 +1,19 @@
-const puppeteer = require('puppeteer');
-const axe = require('axe-core');
-const { Octokit } = require('@octokit/rest');
-const { Configuration, OpenAIApi } = require('openai');
-const path = require('path');
-const fs = require('fs').promises;
+import puppeteer from 'puppeteer';
+import * as axe from 'axe-core';
+import { Octokit } from '@octokit/rest';
+import OpenAI from 'openai';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Initialize OpenAI
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 // Initialize GitHub client
 const octokit = new Octokit({
@@ -17,7 +21,7 @@ const octokit = new Octokit({
 });
 
 // Read GitHub event payload
-const event = require(process.env.GITHUB_EVENT_PATH);
+const event = JSON.parse(await fs.readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
 const repo = event.repository.name;
 const owner = event.repository.owner.login;
 const pull_number = event.pull_request.number;
@@ -54,12 +58,12 @@ async function analyzeWithAI(violations, route) {
 
 Violations: ${JSON.stringify(violations, null, 2)}`;
 
-  const response = await openai.createChatCompletion({
+  const response = await openai.chat.completions.create({
     model: "gpt-4",
     messages: [{ role: "user", content: prompt }],
   });
 
-  return response.data.choices[0].message.content;
+  return response.choices[0].message.content;
 }
 
 async function auditRoute(page, route) {
@@ -103,7 +107,8 @@ ${result.aiAnalysis}
 async function main() {
   try {
     // Start the Angular dev server
-    const serve = require('child_process').spawn('npm', ['start'], {
+    const { spawn } = await import('child_process');
+    const serve = spawn('npm', ['start'], {
       stdio: 'inherit'
     });
 
@@ -111,7 +116,20 @@ async function main() {
     await new Promise(resolve => setTimeout(resolve, 20000));
 
     const changedFiles = await getChangedFiles();
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      headless: "new",
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--disable-audio-output',
+        '--disable-web-audio',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-dev-shm-usage'
+      ]
+    });
     const page = await browser.newPage();
     
     // Enable console logging from the page
