@@ -117,8 +117,18 @@ async function main() {
 
     const changedFiles = await getChangedFiles();
     const browser = await puppeteer.launch({
-      headless: "new",  // Use new headless mode
-      args: ['--no-sandbox', '--disable-setuid-sandbox']  // Required for running in GitHub Actions
+      headless: "new",
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--disable-audio-output',
+        '--disable-web-audio',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-dev-shm-usage'
+      ]
     });
     const page = await browser.newPage();
     
