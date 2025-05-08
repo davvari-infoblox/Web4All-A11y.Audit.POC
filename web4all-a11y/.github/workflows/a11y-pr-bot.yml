@@ -18,6 +18,9 @@ jobs:
           # Remove cache strategy until we have a lock file
           # cache: 'npm'
 
+          # Added package-lock.json to the repo
+          # to ensure consistent installs across environments
+
       - name: Generate package-lock.json
         run: |
           npm install --package-lock-only
