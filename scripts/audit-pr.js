@@ -6,13 +6,21 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Initialize OpenAI
+// TODO: Try different openai models
+// Initialize OpenAI with Azure configuration
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.AZURE_OPENAI_API_KEY,
+  baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}/openai/deployments/${process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4'}/chat/completions?api-version=${process.env.API_VERSION || '2025-01-01-preview'}`,
+  defaultQuery: { 'api-version': process.env.API_VERSION || '2025-01-01-preview' },
+  defaultHeaders: { 'api-key': process.env.AZURE_OPENAI_API_KEY }
 });
 
 // Initialize GitHub client
