@@ -24,7 +24,14 @@ const octokit = new Octokit({
 const event = JSON.parse(await fs.readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
 const repo = event.repository.name;
 const owner = event.repository.owner.login;
-const pull_number = event.pull_request.number;
+
+// Handle both push and pull request events
+let isPullRequest = false;
+let pull_number;
+if (event.pull_request) {
+  isPullRequest = true;
+  pull_number = event.pull_request.number;
+}
 
 // Angular routes to test
 const routes = [
@@ -41,12 +48,22 @@ const routes = [
 ];
 
 async function getChangedFiles() {
-  const { data: files } = await octokit.pulls.listFiles({
-    owner,
-    repo,
-    pull_number,
-  });
-  return files.map(file => file.filename);
+  if (isPullRequest) {
+    const { data: files } = await octokit.pulls.listFiles({
+      owner,
+      repo,
+      pull_number,
+    });
+    return files.map(file => file.filename);
+  } else {
+    // For push events, get the changed files from the commits
+    const { data: commits } = await octokit.repos.getCommit({
+      owner,
+      repo,
+      ref: event.after, // SHA of the latest commit
+    });
+    return commits.files.map(file => file.filename);
+  }
 }
 
 async function analyzeWithAI(violations, route) {
@@ -81,7 +98,7 @@ async function auditRoute(page, route) {
   };
 }
 
-async function createPRComment(analysisResults) {
+async function createComment(analysisResults) {
   const comment = `## 🔍 Accessibility Audit Results
 
 ${analysisResults.map(result => `
@@ -96,12 +113,24 @@ ${result.aiAnalysis}
 🤖 This analysis was performed by the A11y PR Bot using axe-core and OpenAI.
 `;
 
-  await octokit.issues.createComment({
-    owner,
-    repo,
-    issue_number: pull_number,
-    body: comment
-  });
+  if (isPullRequest) {
+    // Comment on the PR
+    await octokit.issues.createComment({
+      owner,
+      repo,
+      issue_number: pull_number,
+      body: comment
+    });
+  } else {
+    // Create an issue for push events
+    await octokit.issues.create({
+      owner,
+      repo,
+      title: '🔍 Accessibility Audit Results',
+      body: comment,
+      labels: ['accessibility', 'automated-audit']
+    });
+  }
 }
 
 async function main() {
@@ -160,7 +189,7 @@ async function main() {
     serve.kill(); // Stop the dev server
 
     if (results.length > 0) {
-      await createPRComment(results);
+      await createComment(results);
     }
 
     // Exit with error if any violations were found
