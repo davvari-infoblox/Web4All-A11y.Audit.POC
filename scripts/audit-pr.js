@@ -46,7 +46,7 @@ const axeConfig = {
     values: ['wcag2aaa', 'wcag21aaa', 'wcag22aa', 'best-practice']
   },
   reporter: 'v2',
-  resultTypes: ['violations', 'incomplete', 'passes']
+  resultTypes: ['violations']
 };
 
 async function discoverRoutes(page, baseUrl = 'http://localhost:4200') {
@@ -213,11 +213,11 @@ function generateViolationDetails(violation) {
   const badge = getSeverityBadge(impact);
   
   return `
-##### ${badge} - ${violation.help}
+#### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
 - **WCAG Level:** ${wcagLevel}
 - **Impact:** ${impact}
-
+- **WCAG Success Criteria:** ${violation.tags.filter(tag => tag.startsWith('wcag')).map(tag => wcagLevelMap[tag] || tag).join(', ')}
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
 
@@ -260,7 +260,7 @@ ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ## Detailed Analysis by Severity
 
 ${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
-##### ${getSeverityBadge(level)} Issues (${data.count})
+#### ${getSeverityBadge(level)} Issues (${data.count})
 ${data.items.map(violation => `
 ### On Route: ${violation.route}
 ${generateViolationDetails(violation)}
