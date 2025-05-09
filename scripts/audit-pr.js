@@ -136,18 +136,30 @@ async function auditRoute(page, route) {
   console.log(`Testing route: ${route}`);
   await page.goto(`http://localhost:4200${route}`, { waitUntil: 'networkidle0' });
   
-  // Inject and run axe-core with AAA level configuration
-  // Read axe-core as a string instead of using axe.source
-  const axePath = path.join(dirname(require.resolve('axe-core')), 'axe.min.js');
-  const axeScript = await fs.readFile(axePath, 'utf8');
+  // Inject and run axe-core using inline script since we're in ES module context
+  // Load axe directly from the imported module
+  const axeSource = axe.source;
   
-  // Inject axe-core script into the page
-  await page.evaluateHandle(script => {
-    const scriptElement = document.createElement('script');
-    scriptElement.textContent = script;
-    document.head.appendChild(scriptElement);
-    return document.head.lastChild;
-  }, axeScript);
+  if (!axeSource) {
+    console.log('Loading axe-core directly as string...');
+    
+    // Inject axe-core script into the page
+    await page.evaluateHandle(() => {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.7.0/axe.min.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => reject(new Error('Failed to load axe-core'));
+        document.head.appendChild(script);
+      });
+    });
+    
+    // Wait a moment to ensure axe is fully loaded
+    await page.waitForFunction(() => typeof window.axe !== 'undefined');
+  } else {
+    // Use the imported axe source if available
+    await page.evaluate(axeSource);
+  }
   
   // Run axe after ensuring it's loaded
   const results = await page.evaluate((config) => {
