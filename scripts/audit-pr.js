@@ -3,11 +3,6 @@ import * as axe from 'axe-core';
 import { Octokit } from '@octokit/rest';
 import OpenAI from 'openai';
 import { promises as fs } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Initialize Azure OpenAI client
 const openai = new OpenAI({
@@ -33,18 +28,6 @@ if (event.pull_request) {
   pull_number = event.pull_request.number;
 }
 
-const routes = [
-  '/',
-  '/home',
-  '/about',
-  '/home/overview',
-  '/home/details',
-  '/about/mission',
-  '/about/team',
-  '/contact/info',
-  '/contact/form'
-];
-
 // WCAG Level mapping
 const wcagLevelMap = {
   'wcag2a': 'WCAG 2.0 Level A',
@@ -57,22 +40,32 @@ const wcagLevelMap = {
   'best-practice': 'Best Practice'
 };
 
-// Configure axe options for AAA level testing
 const axeConfig = {
   runOnly: {
     type: 'tag',
     values: ['wcag2aaa', 'wcag21aaa', 'wcag22aa', 'best-practice']
   },
   reporter: 'v2',
-  resultTypes: ['violations', 'incomplete', 'passes'],
-  rules: {
-    'color-contrast': { enabled: true },
-    'link-in-text-block': { enabled: true },
-    'autocomplete-valid': { enabled: true },
-    'video-description': { enabled: true },
-    'audio-description': { enabled: true }
-  }
+  resultTypes: ['violations']
 };
+
+async function discoverRoutes(page, baseUrl = 'http://localhost:4200') {
+  // Wait for the page to load
+  await page.goto(baseUrl, { waitUntil: 'networkidle0' });
+  
+  // Gather every <a> with a routerLink or href starting "/"
+  const hrefs = await page.evaluate(() => {
+    const els = Array.from(document.querySelectorAll('a[routerLink], a[href^="/"]'));
+    return els
+      .map(a => a.getAttribute('routerLink') || a.getAttribute('href'))
+      .filter(h => h && !h.startsWith('http'))
+      .map(h => h.split('?')[0].split('#')[0]);  // strip query/hash
+  });
+  
+  // de‑duplicate and ensure "/" prefix
+  const uniqueRoutes = Array.from(new Set(hrefs.map(h => h.startsWith('/') ? h : '/' + h)));
+  return uniqueRoutes;
+}
 
 async function getChangedFiles() {
   if (isPullRequest) {
@@ -135,13 +128,36 @@ async function auditRoute(page, route) {
   console.log(`Testing route: ${route}`);
   await page.goto(`http://localhost:4200${route}`, { waitUntil: 'networkidle0' });
   
-  // Inject and run axe-core with AAA level configuration
-  await page.evaluate(axe.source);
-  const results = await page.evaluate((config) => axe.run(document, config), axeConfig);
+  // Inject and run axe-core using inline script since we're in ES module context
+  // Load axe directly from the imported module
+  const axeSource = axe.source;
+  
+  if (!axeSource) {   
+    // Inject axe-core script into the page
+    await page.evaluateHandle(() => {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.7.0/axe.min.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => reject(new Error('Failed to load axe-core'));
+        document.head.appendChild(script);
+      });
+    });
+    
+    // Wait a moment to ensure axe is fully loaded
+    await page.waitForFunction(() => typeof window.axe !== 'undefined');
+  } else {
+    // Use the imported axe source if available
+    await page.evaluate(axeSource);
+  }
+  
+  // Run axe after ensuring it's loaded
+  const results = await page.evaluate((config) => {
+    return window.axe.run(document, config);
+  },axeConfig);
   
   console.log(`Results for route ${route}:`, {
     violations: results.violations.length,
-    passes: results.passes.length,
     incomplete: results.incomplete.length
   });
 
@@ -191,34 +207,19 @@ async function auditRoute(page, route) {
   };
 }
 
-async function generateViolationDetails(violation) {
+function generateViolationDetails(violation) {
   const impact = violation.impact || 'unknown';
   const wcagLevel = getWCAGLevel(violation.tags);
   const badge = getSeverityBadge(impact);
   
   return `
-### ${badge} - ${violation.help}
+#### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
 - **WCAG Level:** ${wcagLevel}
 - **Impact:** ${impact}
-- **Description:** ${violation.description}
 - **WCAG Success Criteria:** ${violation.tags.filter(tag => tag.startsWith('wcag')).map(tag => wcagLevelMap[tag] || tag).join(', ')}
-
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
-
-\`\`\`html
-${violation.nodes.map(node => node.html).join('\n')}
-\`\`\`
-
-${violation.nodes.map(node => `
-#### Element ${node.target.join(' ')}
-- **HTML:** \`${node.html}\`
-- **Fix Summary:** ${node.failureSummary}
-- **Impact:** ${node.impact || 'Unknown'}
-${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
-${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
-`).join('\n')}
 
 **Help:** ${violation.helpUrl}
 </details>`;
@@ -259,34 +260,15 @@ ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ## Detailed Analysis by Severity
 
 ${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
-### ${getSeverityBadge(level)} Issues (${data.count})
+#### ${getSeverityBadge(level)} Issues (${data.count})
 ${data.items.map(violation => `
-#### On Route: ${violation.route}
+### On Route: ${violation.route}
 ${generateViolationDetails(violation)}
-
-##### AI Analysis
-${violation.aiAnalysis}
-`).join('\n')}
-` : '').join('\n')}
-
-## Test Coverage Summary
-- Total Routes Tested: ${analysisResults.length}
-- Total Elements Checked: ${analysisResults.reduce((sum, r) => sum + r.passes.length + r.violations.length + r.incomplete.length + r.inapplicable.length, 0)}
-- Passing Rules: ${analysisResults.reduce((sum, r) => sum + r.passes.length, 0)}
-- Total Violations: ${totalViolations}
-- Needs Review: ${analysisResults.reduce((sum, r) => sum + r.incomplete.length, 0)}
-
-## Testing Configuration
-- WCAG Level: AAA
-- Standards: WCAG 2.0, 2.1, 2.2
-- Best Practices: Included
-- Tool Version: axe-core ${axe.version}
+ `).join('\n')}
+ ` : '').join('\n')}
 
 ## Reports
 Detailed JSON reports have been saved in the \`audit-reports\` directory.
-
----
-🤖 This analysis was performed by the A11y PR Bot using axe-core ${axe.version} and Azure OpenAI GPT-4.
 `;
 
   if (isPullRequest) {
@@ -305,23 +287,22 @@ Detailed JSON reports have been saved in the \`audit-reports\` directory.
       labels: ['accessibility', 'automated-audit', 'wcag-aaa']
     });
   }
-
-  console.log('Reports saved to audit-reports directory');
 }
 
+// Initialize Puppeteer and get routes
 async function main() {
   try {
-    console.log('Starting AAA level accessibility audit...');
+    //'Starting AAA level accessibility audit...'
     const { spawn } = await import('child_process');
     const serve = spawn('npm', ['start'], {
       stdio: 'inherit'
     });
 
-    console.log('Waiting for Angular server to start...');
+    //'Waiting for Angular server to start...'
     await new Promise(resolve => setTimeout(resolve, 20000));
 
     const changedFiles = await getChangedFiles();
-    console.log('Changed files:', changedFiles);
+    //'Changed files:', changedFiles'
 
     const browser = await puppeteer.launch({
       headless: "new",
@@ -337,6 +318,8 @@ async function main() {
     const page = await browser.newPage();
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
 
+    // Discover routes using the initialized page object
+    const routes = await discoverRoutes(page);
     const results = [];
     
     for (const route of routes) {
@@ -344,20 +327,8 @@ async function main() {
       const isRouteAffected = changedFiles.some(file => 
         routeComponents.some(component => file.includes(component))
       );
-
-      if (isRouteAffected) {
-        console.log(`Auditing route: ${route}`);
-        const auditResult = await auditRoute(page, route);
-        
-        // Get AI analysis for each violation individually for more detailed insights
-        if (auditResult.violations.length > 0) {
-          for (const violation of auditResult.violations) {
-            violation.aiAnalysis = await analyzeWithAI([violation], route);
-          }
-        }
-        
-        results.push(auditResult);
-      }
+      const auditResult = await auditRoute(page, route);
+      results.push(auditResult);
     }
 
     await browser.close();
