@@ -216,56 +216,83 @@ function generateViolationDetails(violation) {
 #### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
 - **WCAG Level:** ${wcagLevel}
-- **Impact:** ${impact}
-- **WCAG Success Criteria:** ${violation.tags.filter(tag => tag.startsWith('wcag')).map(tag => wcagLevelMap[tag] || tag).join(', ')}
+- **Help:** ${violation.helpUrl}
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
-
-**Help:** ${violation.helpUrl}
 </details>`;
 }
 
 async function createComment(analysisResults) {
   let totalViolations = 0;
-  const violationsByLevel = {
-    critical: { count: 0, items: [] },
-    serious: { count: 0, items: [] },
-    moderate: { count: 0, items: [] },
-    minor: { count: 0, items: [] }
-  };
+  const violationsByRoute = {};
   
+  // Count total violations and organize by route
   for (const result of analysisResults) {
-    for (const violation of result.violations) {
-      totalViolations++;
-      const level = violation.impact || 'minor';
-      violationsByLevel[level].count++;
-      violationsByLevel[level].items.push({
-        ...violation,
-        route: result.route
-      });
+    const route = result.route;
+    if (result.violations.length > 0) {
+      if (!violationsByRoute[route]) {
+        violationsByRoute[route] = {
+          violations: [],
+          critical: 0,
+          serious: 0,
+          moderate: 0,
+          minor: 0
+        };
+      }
+      
+      for (const violation of result.violations) {
+        totalViolations++;
+        const level = violation.impact || 'minor';
+        violationsByRoute[route].violations.push(violation);
+        violationsByRoute[route][level]++;
+      }
     }
   }
+
+  // Count violations by severity across all routes
+  const severityCounts = {
+    critical: 0, 
+    serious: 0,
+    moderate: 0, 
+    minor: 0
+  };
+  
+  Object.values(violationsByRoute).forEach(routeData => {
+    severityCounts.critical += routeData.critical;
+    severityCounts.serious += routeData.serious;
+    severityCounts.moderate += routeData.moderate;
+    severityCounts.minor += routeData.minor;
+  });
 
   const summary = `# 🔍 Accessibility Audit Report (AAA Level)
 
 ## Executive Summary
 ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ⚠️ Found ${totalViolations} total violations:
-- 🔴 Critical: ${violationsByLevel.critical.count}
-- 🟠 Serious: ${violationsByLevel.serious.count}
-- 🟡 Moderate: ${violationsByLevel.moderate.count}
-- 🔵 Minor: ${violationsByLevel.minor.count}
+- 🔴 Critical: ${severityCounts.critical}
+- 🟠 Serious: ${severityCounts.serious}
+- 🟡 Moderate: ${severityCounts.moderate}
+- 🔵 Minor: ${severityCounts.minor}
 `}
 
-## Detailed Analysis by Severity
+## Detailed Analysis by Route
 
-${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
-#### ${getSeverityBadge(level)} Issues (${data.count})
-${data.items.map(violation => `
-### On Route: ${violation.route}
-${generateViolationDetails(violation)}
- `).join('\n')}
- ` : '').join('\n')}
+${Object.entries(violationsByRoute).map(([route, data]) => `
+### Route: ${route} (${data.violations.length} violations)
+
+${data.violations.map(violation => `
+<details>
+<summary>${getSeverityBadge(violation.impact)} - ${violation.help}</summary>
+
+- **Rule:** \`${violation.id}\`
+- **WCAG Level:** ${getWCAGLevel(violation.tags)}
+- **Help:** ${violation.helpUrl}
+<details>
+<summary>Affected Elements (${violation.nodes.length})</summary>
+</details>
+</details>
+`).join('\n')}
+`).join('\n')}
 
 ## Reports
 Detailed JSON reports have been saved in the \`audit-reports\` directory.
