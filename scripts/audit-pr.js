@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -136,8 +137,22 @@ async function auditRoute(page, route) {
   await page.goto(`http://localhost:4200${route}`, { waitUntil: 'networkidle0' });
   
   // Inject and run axe-core with AAA level configuration
-  await page.evaluate(axe.source);
-  const results = await page.evaluate((config) => axe.run(document, config), axeConfig);
+  // Read axe-core as a string instead of using axe.source
+  const axePath = path.join(dirname(require.resolve('axe-core')), 'axe.min.js');
+  const axeScript = await fs.readFile(axePath, 'utf8');
+  
+  // Inject axe-core script into the page
+  await page.evaluateHandle(script => {
+    const scriptElement = document.createElement('script');
+    scriptElement.textContent = script;
+    document.head.appendChild(scriptElement);
+    return document.head.lastChild;
+  }, axeScript);
+  
+  // Run axe after ensuring it's loaded
+  const results = await page.evaluate((config) => {
+    return window.axe.run(document, config);
+  }, axeConfig);
   
   console.log(`Results for route ${route}:`, {
     violations: results.violations.length,
