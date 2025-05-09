@@ -218,7 +218,7 @@ async function auditRoute(page, route) {
   };
 }
 
-async function generateViolationDetails(violation) {
+function generateViolationDetails(violation) {
   const impact = violation.impact || 'unknown';
   const wcagLevel = getWCAGLevel(violation.tags);
   const badge = getSeverityBadge(impact);
@@ -290,11 +290,6 @@ ${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
 ${data.items.map(violation => `
 #### On Route: ${violation.route}
 ${generateViolationDetails(violation)}
-
-##### AI Analysis
-${violation.aiAnalysis}
-`).join('\n')}
-` : '').join('\n')}
 
 ## Test Coverage Summary
 - Total Routes Tested: ${analysisResults.length}
