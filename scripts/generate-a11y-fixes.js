@@ -7,7 +7,7 @@ import path from "path";
 const openai = new AzureOpenAI({
   apiKey: process.env.AZURE_OPENAI_API_KEY,
   endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-  deployment: "gpt-4o", // your deployment name in Azure
+  deployment: "gpt-4.1-mini", // your deployment name in Azure
   apiVersion: process.env.API_VERSION,
 });
 
@@ -102,7 +102,7 @@ async function generateFixes(violations, route) {
 
     // Call OpenAI to generate fixes
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4.1-mini",
       messages: [
         {
           role: "system",
