@@ -84,6 +84,7 @@ jobs:
           retention-days: 90
 
       - name: Generate accessibility fixes
+        if: always()
         env:
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
           AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
