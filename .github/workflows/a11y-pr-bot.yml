@@ -70,9 +70,11 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
           PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
         run: |
-          mkdir -p audit-reports
           echo '{"status": "initialized", "timestamp": "'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"}' > audit-reports/initial-state.json
-          node scripts/audit-pr.js || echo '{"status": "failed", "timestamp": "'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"}' > audit-reports/error-state.json
+          node scripts/audit-pr.js
+          if [ $? -ne 0 ]; then
+            echo '{"status": "failed", "timestamp": "'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'", "error": "Script execution failed"}' > audit-reports/error-state.json
+          fi
 
       - uses: actions/upload-artifact@v4
         if: always()
