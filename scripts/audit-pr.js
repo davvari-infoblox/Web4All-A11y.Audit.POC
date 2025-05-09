@@ -213,28 +213,13 @@ function generateViolationDetails(violation) {
   const badge = getSeverityBadge(impact);
   
   return `
-### ${badge} - ${violation.help}
+##### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
 - **WCAG Level:** ${wcagLevel}
 - **Impact:** ${impact}
-- **Description:** ${violation.description}
-- **WCAG Success Criteria:** ${violation.tags.filter(tag => tag.startsWith('wcag')).map(tag => wcagLevelMap[tag] || tag).join(', ')}
 
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
-
-\`\`\`html
-${violation.nodes.map(node => node.html).join('\n')}
-\`\`\`
-
-${violation.nodes.map(node => `
-#### Element ${node.target.join(' ')}
-- **HTML:** \`${node.html}\`
-- **Fix Summary:** ${node.failureSummary}
-- **Impact:** ${node.impact || 'Unknown'}
-${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
-${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
-`).join('\n')}
 
 **Help:** ${violation.helpUrl}
 </details>`;
@@ -275,31 +260,15 @@ ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ## Detailed Analysis by Severity
 
 ${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
-### ${getSeverityBadge(level)} Issues (${data.count})
+##### ${getSeverityBadge(level)} Issues (${data.count})
 ${data.items.map(violation => `
-#### On Route: ${violation.route}
+### On Route: ${violation.route}
 ${generateViolationDetails(violation)}
  `).join('\n')}
  ` : '').join('\n')}
 
-## Test Coverage Summary
-- Total Routes Tested: ${analysisResults.length}
-- Total Elements Checked: ${analysisResults.reduce((sum, r) => sum + r.passes.length + r.violations.length + r.incomplete.length + r.inapplicable.length, 0)}
-- Passing Rules: ${analysisResults.reduce((sum, r) => sum + r.passes.length, 0)}
-- Total Violations: ${totalViolations}
-- Needs Review: ${analysisResults.reduce((sum, r) => sum + r.incomplete.length, 0)}
-
-## Testing Configuration
-- WCAG Level: AAA
-- Standards: WCAG 2.0, 2.1, 2.2
-- Best Practices: Included
-- Tool Version: axe-core ${axe.version}
-
 ## Reports
 Detailed JSON reports have been saved in the \`audit-reports\` directory.
-
----
-🤖 This analysis was performed by the A11y PR Bot using axe-core ${axe.version} and Azure OpenAI GPT-4.
 `;
 
   if (isPullRequest) {
@@ -366,8 +335,7 @@ async function main() {
     serve.kill();
 
     if (results.length > 0) {
-      // TODO: undo
-      // await createComment(results);
+      await createComment(results);
     }
 
     const hasViolations = results.some(result => result.violations.length > 0);
