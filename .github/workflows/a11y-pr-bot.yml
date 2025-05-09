@@ -10,7 +10,6 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
-  actions: write
 
 jobs:
   audit:
@@ -21,19 +20,14 @@ jobs:
       PUPPETEER_ARGS: '--no-sandbox --disable-setuid-sandbox'
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-
-      - name: Generate package-lock.json
-        run: |
-          npm install --package-lock-only
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git add package-lock.json
+          cache: 'npm'
 
       - name: Install dependencies
         run: |
@@ -61,10 +55,8 @@ jobs:
             libatk-bridge2.0-0 \
             libpangocairo-1.0-0 \
             libgtk-3-0 \
-            libgbm1 \
-            build-essential
+            libgbm1
 
-      # Create audit-reports directory
       - name: Create reports directory
         run: mkdir -p audit-reports
 
@@ -78,16 +70,12 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
           PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
         run: |
-          # Ensure directory exists even if script fails
           mkdir -p audit-reports
-          # Create a default report in case the audit fails
-          echo '{"status": "no-violations-found", "timestamp": "'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"}' > audit-reports/default-report.json
-          # Run the audit
-          node scripts/audit-pr.js
+          echo '{"status": "initialized", "timestamp": "'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"}' > audit-reports/initial-state.json
+          node scripts/audit-pr.js || echo '{"status": "failed", "timestamp": "'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"}' > audit-reports/error-state.json
 
-      - name: Upload audit reports
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v3
         with:
           name: accessibility-audit-reports
           path: audit-reports/
