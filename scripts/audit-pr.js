@@ -4,11 +4,8 @@ import { Octokit } from '@octokit/rest';
 import OpenAI from 'openai';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Initialize Azure OpenAI client
 const openai = new OpenAI({
@@ -47,20 +44,23 @@ const wcagLevelMap = {
 };
 
 async function discoverRoutes(page, baseUrl = 'http://localhost:4200') {
+  console.log('Discovering routes...');
   await page.goto(baseUrl, { waitUntil: 'networkidle0' });
-  // Gather every <a> with a routerLink or href starting “/”
+  
+  // Gather every <a> with a routerLink or href starting "/"
   const hrefs = await page.evaluate(() => {
     const els = Array.from(document.querySelectorAll('a[routerLink], a[href^="/"]'));
     return els
       .map(a => a.getAttribute('routerLink') || a.getAttribute('href'))
       .filter(h => h && !h.startsWith('http'))
-      .map(h => h.split('?')[0].split('#')[0]);           // strip query/hash
+      .map(h => h.split('?')[0].split('#')[0]);  // strip query/hash
   });
-  // de‑duplicate and ensure “/” prefix
-  return Array.from(new Set(hrefs.map(h => h.startsWith('/') ? h : '/' + h)));
+  
+  // de‑duplicate and ensure "/" prefix
+  const uniqueRoutes = Array.from(new Set(hrefs.map(h => h.startsWith('/') ? h : '/' + h)));
+  console.log('Discovered routes:', uniqueRoutes);
+  return uniqueRoutes;
 }
-
-const routes = await discoverRoutes(page);
 
 async function getChangedFiles() {
   if (isPullRequest) {
@@ -320,6 +320,7 @@ Detailed JSON reports have been saved in the \`audit-reports\` directory.
   console.log('Reports saved to audit-reports directory');
 }
 
+// Initialize Puppeteer and get routes
 async function main() {
   try {
     console.log('Starting AAA level accessibility audit...');
@@ -348,6 +349,10 @@ async function main() {
     const page = await browser.newPage();
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
 
+    // Discover routes using the initialized page object
+    const routes = await discoverRoutes(page);
+    console.log('Discovered routes:', routes);
+
     const results = [];
     
     for (const route of routes) {
@@ -356,22 +361,9 @@ async function main() {
         routeComponents.some(component => file.includes(component))
       );
 
-      // if (isRouteAffected) {
-        console.log(`Auditing route: ${route}`);
-        const auditResult = await auditRoute(page, route);
-        
-        // Get AI analysis for each violation individually for more detailed insights
-        // TODO
-        // if (auditResult.violations.length > 0) {
-        //   for (const violation of auditResult.violations) {
-        //     violation.aiAnalysis = await analyzeWithAI([violation], route);
-        //   }
-        // }
-
-        console.log(auditResult);
-        
-        results.push(auditResult);
-      // }
+      console.log(`Auditing route: ${route}`);
+      const auditResult = await auditRoute(page, route);
+      results.push(auditResult);
     }
 
     await browser.close();
