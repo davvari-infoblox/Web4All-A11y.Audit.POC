@@ -216,12 +216,9 @@ function generateViolationDetails(violation) {
 #### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
 - **WCAG Level:** ${wcagLevel}
-- **Impact:** ${impact}
-- **WCAG Success Criteria:** ${violation.tags.filter(tag => tag.startsWith('wcag')).map(tag => wcagLevelMap[tag] || tag).join(', ')}
+- **Help:** ${violation.helpUrl}
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
-
-**Help:** ${violation.helpUrl}
 </details>`;
 }
 
@@ -262,11 +259,11 @@ ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
 #### ${getSeverityBadge(level)} Issues (${data.count})
 ${data.items.map(violation => `
-### On Route: ${violation.route}
+<details>### On Route: ${violation.route}
 ${generateViolationDetails(violation)}
  `).join('\n')}
  ` : '').join('\n')}
-
+</details>
 ## Reports
 Detailed JSON reports have been saved in the \`audit-reports\` directory.
 `;
