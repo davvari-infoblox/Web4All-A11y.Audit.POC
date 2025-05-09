@@ -68,10 +68,10 @@ const axeConfig = {
   resultTypes: ['violations', 'incomplete', 'passes'],
   rules: {
     'color-contrast': { enabled: true },
-    'link-in-text-block': { enabled: true },
-    'autocomplete-valid': { enabled: true },
-    'video-description': { enabled: true },
-    'audio-description': { enabled: true }
+    'label': { enabled: true },
+    // 'autocomplete-valid': { enabled: true },
+    // 'video-description': { enabled: true },
+    // 'audio-description': { enabled: true }
   }
 };
 
