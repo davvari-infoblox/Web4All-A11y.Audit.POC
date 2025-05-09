@@ -6,7 +6,7 @@ import path from 'path';
 // Initialize Azure OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.AZURE_OPENAI_API_KEY,
-  baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}/openai/deployments/gpt-4o/chat/completions?api-version=${process.env.API_VERSION}`,
+  baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}/openai/deployments/gpt-4/chat/completions?api-version=${process.env.API_VERSION}`,
 });
 
 // Initialize GitHub client
@@ -85,7 +85,7 @@ async function generateFixes(violations, route) {
     
     // Call OpenAI to generate fixes
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         { role: "system", content: "You generate git-style diff hunks to fix a11y violations." },
         {

@@ -370,7 +370,8 @@ async function main() {
     serve.kill();
 
     if (results.length > 0) {
-      await createComment(results);
+      // TODO: undo
+      // await createComment(results);
     }
 
     const hasViolations = results.some(result => result.violations.length > 0);
