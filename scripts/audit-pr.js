@@ -377,11 +377,12 @@ async function main() {
         const auditResult = await auditRoute(page, route);
         
         // Get AI analysis for each violation individually for more detailed insights
-        if (auditResult.violations.length > 0) {
-          for (const violation of auditResult.violations) {
-            violation.aiAnalysis = await analyzeWithAI([violation], route);
-          }
-        }
+        // TODO
+        // if (auditResult.violations.length > 0) {
+        //   for (const violation of auditResult.violations) {
+        //     violation.aiAnalysis = await analyzeWithAI([violation], route);
+        //   }
+        // }
 
         console.log(auditResult);
         
