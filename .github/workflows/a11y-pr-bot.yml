@@ -84,7 +84,6 @@ jobs:
           retention-days: 90
 
       - name: Generate accessibility fixes
-        if: github.event_name == 'pull_request'
         env:
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
           AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
