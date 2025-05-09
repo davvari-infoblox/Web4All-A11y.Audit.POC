@@ -82,3 +82,14 @@ jobs:
           name: accessibility-audit-reports
           path: audit-reports/
           retention-days: 90
+
+      - name: Generate accessibility fixes
+        env:
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          API_VERSION: 2025-01-01-preview
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: |
+          echo "Generating accessibility fix suggestions..."
+          node scripts/generate-a11y-fixes.js
