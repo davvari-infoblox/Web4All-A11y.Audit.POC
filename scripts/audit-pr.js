@@ -3,9 +3,6 @@ import * as axe from 'axe-core';
 import { Octokit } from '@octokit/rest';
 import OpenAI from 'openai';
 import { promises as fs } from 'fs';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
 
 // Initialize Azure OpenAI client
 const openai = new OpenAI({
@@ -43,8 +40,17 @@ const wcagLevelMap = {
   'best-practice': 'Best Practice'
 };
 
+const axeConfig = {
+  runOnly: {
+    type: 'tag',
+    values: ['wcag2aaa', 'wcag21aaa', 'wcag22aa', 'best-practice']
+  },
+  reporter: 'v2',
+  resultTypes: ['violations', 'incomplete', 'passes']
+};
+
 async function discoverRoutes(page, baseUrl = 'http://localhost:4200') {
-  console.log('Discovering routes...');
+  // Wait for the page to load
   await page.goto(baseUrl, { waitUntil: 'networkidle0' });
   
   // Gather every <a> with a routerLink or href starting "/"
@@ -58,7 +64,6 @@ async function discoverRoutes(page, baseUrl = 'http://localhost:4200') {
   
   // de‑duplicate and ensure "/" prefix
   const uniqueRoutes = Array.from(new Set(hrefs.map(h => h.startsWith('/') ? h : '/' + h)));
-  console.log('Discovered routes:', uniqueRoutes);
   return uniqueRoutes;
 }
 
@@ -127,9 +132,7 @@ async function auditRoute(page, route) {
   // Load axe directly from the imported module
   const axeSource = axe.source;
   
-  if (!axeSource) {
-    console.log('Loading axe-core directly as string...');
-    
+  if (!axeSource) {   
     // Inject axe-core script into the page
     await page.evaluateHandle(() => {
       return new Promise((resolve, reject) => {
@@ -151,11 +154,10 @@ async function auditRoute(page, route) {
   // Run axe after ensuring it's loaded
   const results = await page.evaluate((config) => {
     return window.axe.run(document, config);
-  });
+  },axeConfig);
   
   console.log(`Results for route ${route}:`, {
     violations: results.violations.length,
-    // passes: results.passes.length,
     incomplete: results.incomplete.length
   });
 
@@ -316,24 +318,22 @@ Detailed JSON reports have been saved in the \`audit-reports\` directory.
       labels: ['accessibility', 'automated-audit', 'wcag-aaa']
     });
   }
-
-  console.log('Reports saved to audit-reports directory');
 }
 
 // Initialize Puppeteer and get routes
 async function main() {
   try {
-    console.log('Starting AAA level accessibility audit...');
+    //'Starting AAA level accessibility audit...'
     const { spawn } = await import('child_process');
     const serve = spawn('npm', ['start'], {
       stdio: 'inherit'
     });
 
-    console.log('Waiting for Angular server to start...');
+    //'Waiting for Angular server to start...'
     await new Promise(resolve => setTimeout(resolve, 20000));
 
     const changedFiles = await getChangedFiles();
-    console.log('Changed files:', changedFiles);
+    //'Changed files:', changedFiles'
 
     const browser = await puppeteer.launch({
       headless: "new",
@@ -351,8 +351,6 @@ async function main() {
 
     // Discover routes using the initialized page object
     const routes = await discoverRoutes(page);
-    console.log('Discovered routes:', routes);
-
     const results = [];
     
     for (const route of routes) {
@@ -360,8 +358,6 @@ async function main() {
       const isRouteAffected = changedFiles.some(file => 
         routeComponents.some(component => file.includes(component))
       );
-
-      console.log(`Auditing route: ${route}`);
       const auditResult = await auditRoute(page, route);
       results.push(auditResult);
     }
