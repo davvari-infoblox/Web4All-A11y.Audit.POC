@@ -345,7 +345,7 @@ async function main() {
         routeComponents.some(component => file.includes(component))
       );
 
-      if (isRouteAffected) {
+      // if (isRouteAffected) {
         console.log(`Auditing route: ${route}`);
         const auditResult = await auditRoute(page, route);
         
@@ -355,9 +355,11 @@ async function main() {
             violation.aiAnalysis = await analyzeWithAI([violation], route);
           }
         }
+
+        console.log(auditResult);
         
         results.push(auditResult);
-      }
+      // }
     }
 
     await browser.close();
