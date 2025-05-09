@@ -290,6 +290,8 @@ ${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
 ${data.items.map(violation => `
 #### On Route: ${violation.route}
 ${generateViolationDetails(violation)}
+ `).join('\n')}
+ ` : '').join('\n')}
 
 ## Test Coverage Summary
 - Total Routes Tested: ${analysisResults.length}
