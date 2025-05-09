@@ -34,18 +34,6 @@ if (event.pull_request) {
   pull_number = event.pull_request.number;
 }
 
-const routes = [
-  '/',
-  '/home',
-  '/about',
-  '/home/overview',
-  '/home/details',
-  '/about/mission',
-  '/about/team',
-  '/contact/info',
-  '/contact/form'
-];
-
 // WCAG Level mapping
 const wcagLevelMap = {
   'wcag2a': 'WCAG 2.0 Level A',
@@ -58,22 +46,21 @@ const wcagLevelMap = {
   'best-practice': 'Best Practice'
 };
 
-// Configure axe options for AAA level testing
-const axeConfig = {
-  runOnly: {
-    type: 'tag',
-    values: ['wcag2aaa', 'wcag21aaa', 'wcag22aa', 'best-practice']
-  },
-  reporter: 'v2',
-  resultTypes: ['violations', 'incomplete', 'passes'],
-  rules: {
-    'color-contrast': { enabled: true },
-    'label': { enabled: true },
-    // 'autocomplete-valid': { enabled: true },
-    // 'video-description': { enabled: true },
-    // 'audio-description': { enabled: true }
-  }
-};
+async function discoverRoutes(page, baseUrl = 'http://localhost:4200') {
+  await page.goto(baseUrl, { waitUntil: 'networkidle0' });
+  // Gather every <a> with a routerLink or href starting “/”
+  const hrefs = await page.evaluate(() => {
+    const els = Array.from(document.querySelectorAll('a[routerLink], a[href^="/"]'));
+    return els
+      .map(a => a.getAttribute('routerLink') || a.getAttribute('href'))
+      .filter(h => h && !h.startsWith('http'))
+      .map(h => h.split('?')[0].split('#')[0]);           // strip query/hash
+  });
+  // de‑duplicate and ensure “/” prefix
+  return Array.from(new Set(hrefs.map(h => h.startsWith('/') ? h : '/' + h)));
+}
+
+const routes = await discoverRoutes(page);
 
 async function getChangedFiles() {
   if (isPullRequest) {
@@ -164,11 +151,11 @@ async function auditRoute(page, route) {
   // Run axe after ensuring it's loaded
   const results = await page.evaluate((config) => {
     return window.axe.run(document, config);
-  }, axeConfig);
+  });
   
   console.log(`Results for route ${route}:`, {
     violations: results.violations.length,
-    passes: results.passes.length,
+    // passes: results.passes.length,
     incomplete: results.incomplete.length
   });
 
