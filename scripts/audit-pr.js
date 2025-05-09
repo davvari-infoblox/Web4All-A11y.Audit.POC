@@ -37,7 +37,6 @@ const routes = [
   '/',
   '/home',
   '/about',
-  '/contact',
   '/home/overview',
   '/home/details',
   '/about/mission',
