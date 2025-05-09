@@ -46,6 +46,35 @@ const routes = [
   '/contact/form'
 ];
 
+// WCAG Level mapping
+const wcagLevelMap = {
+  'wcag2a': 'WCAG 2.0 Level A',
+  'wcag2aa': 'WCAG 2.0 Level AA',
+  'wcag2aaa': 'WCAG 2.0 Level AAA',
+  'wcag21a': 'WCAG 2.1 Level A',
+  'wcag21aa': 'WCAG 2.1 Level AA',
+  'wcag21aaa': 'WCAG 2.1 Level AAA',
+  'wcag22aa': 'WCAG 2.2 Level AA',
+  'best-practice': 'Best Practice'
+};
+
+// Configure axe options for AAA level testing
+const axeConfig = {
+  runOnly: {
+    type: 'tag',
+    values: ['wcag2aaa', 'wcag21aaa', 'wcag22aa', 'best-practice']
+  },
+  reporter: 'v2',
+  resultTypes: ['violations', 'incomplete', 'passes'],
+  rules: {
+    'color-contrast': { enabled: true },
+    'link-in-text-block': { enabled: true },
+    'autocomplete-valid': { enabled: true },
+    'video-description': { enabled: true },
+    'audio-description': { enabled: true }
+  }
+};
+
 async function getChangedFiles() {
   if (isPullRequest) {
     const { data: files } = await octokit.pulls.listFiles({
@@ -64,22 +93,34 @@ async function getChangedFiles() {
   }
 }
 
-function getSeverityEmoji(impact) {
+function getSeverityBadge(impact) {
   switch (impact?.toLowerCase()) {
-    case 'critical': return '🔴';
-    case 'serious': return '🟠';
-    case 'moderate': return '🟡';
-    case 'minor': return '🔵';
-    default: return '⚪';
+    case 'critical': return '🔴 Critical';
+    case 'serious': return '🟠 Serious';
+    case 'moderate': return '🟡 Moderate';
+    case 'minor': return '🔵 Minor';
+    default: return '⚪ Unknown';
   }
+}
+
+function getWCAGLevel(tags) {
+  const wcagTags = tags.filter(tag => tag.startsWith('wcag2'));
+  if (wcagTags.length === 0) return 'best-practice';
+  return wcagTags.reduce((highest, current) => {
+    if (current.includes('aaa')) return 'AAA';
+    if (current.includes('aa') && highest !== 'AAA') return 'AA';
+    if (current.includes('a') && !current.includes('aa') && highest !== 'AAA' && highest !== 'AA') return 'A';
+    return highest;
+  }, 'A');
 }
 
 async function analyzeWithAI(violations, route) {
   const prompt = `Analyze these accessibility violations found on route ${route} and provide a clear explanation of:
-1. The severity of each issue
-2. How it impacts users with disabilities
-3. Specific steps to fix each issue
-4. Code examples where applicable
+1. The severity of each issue (Critical, Serious, Moderate, Minor)
+2. The WCAG Success Criterion that was violated
+3. How it impacts users with different disabilities
+4. Step-by-step remediation steps with code examples
+5. Additional best practices to consider
 
 Violations: ${JSON.stringify(violations, null, 2)}`;
 
@@ -95,10 +136,11 @@ async function auditRoute(page, route) {
   console.log(`Testing route: ${route}`);
   await page.goto(`http://localhost:4200${route}`, { waitUntil: 'networkidle0' });
   
+  // Inject and run axe-core with AAA level configuration
   await page.evaluate(axe.source);
-  const results = await page.evaluate(() => axe.run());
+  const results = await page.evaluate((config) => axe.run(document, config), axeConfig);
   
-  // Save detailed results to a JSON file
+  // Save detailed results to JSON file
   const reportPath = `audit-reports/route${route.replace(/\//g, '-')}-${Date.now()}.json`;
   await fs.mkdir('audit-reports', { recursive: true });
   await fs.writeFile(reportPath, JSON.stringify(results, null, 2));
@@ -109,21 +151,23 @@ async function auditRoute(page, route) {
     passes: results.passes,
     incomplete: results.incomplete,
     inapplicable: results.inapplicable,
-    reportPath
+    reportPath,
+    timestamp: new Date().toISOString()
   };
 }
 
 async function generateViolationDetails(violation) {
   const impact = violation.impact || 'unknown';
-  const emoji = getSeverityEmoji(impact);
+  const wcagLevel = getWCAGLevel(violation.tags);
+  const badge = getSeverityBadge(impact);
   
   return `
-#### ${emoji} ${violation.help} (${impact})
+### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
-- **Description:** ${violation.description}
+- **WCAG Level:** ${wcagLevel}
 - **Impact:** ${impact}
-- **Elements Affected:** ${violation.nodes.length}
-- **Suggested Fix:** ${violation.helpUrl}
+- **Description:** ${violation.description}
+- **WCAG Success Criteria:** ${violation.tags.filter(tag => tag.startsWith('wcag')).map(tag => wcagLevelMap[tag] || tag).join(', ')}
 
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
@@ -133,70 +177,81 @@ ${violation.nodes.map(node => node.html).join('\n')}
 \`\`\`
 
 ${violation.nodes.map(node => `
-**Element:** \`${node.target[0]}\`
-**Fix:** ${node.failureSummary}
+#### Element ${node.target.join(' ')}
+- **HTML:** \`${node.html}\`
+- **Fix Summary:** ${node.failureSummary}
+- **Impact:** ${node.impact || 'Unknown'}
+${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
+${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
 `).join('\n')}
+
+**Help:** ${violation.helpUrl}
 </details>`;
 }
 
 async function createComment(analysisResults) {
   let totalViolations = 0;
-  let criticalCount = 0;
-  let seriousCount = 0;
-  let moderateCount = 0;
-  let minorCount = 0;
-
-  const violationsByImpact = {};
+  const violationsByLevel = {
+    critical: { count: 0, items: [] },
+    serious: { count: 0, items: [] },
+    moderate: { count: 0, items: [] },
+    minor: { count: 0, items: [] }
+  };
   
   for (const result of analysisResults) {
     for (const violation of result.violations) {
       totalViolations++;
-      const impact = violation.impact || 'unknown';
-      violationsByImpact[impact] = (violationsByImpact[impact] || 0) + 1;
-      
-      switch(impact.toLowerCase()) {
-        case 'critical': criticalCount++; break;
-        case 'serious': seriousCount++; break;
-        case 'moderate': moderateCount++; break;
-        case 'minor': minorCount++; break;
-      }
+      const level = violation.impact || 'minor';
+      violationsByLevel[level].count++;
+      violationsByLevel[level].items.push({
+        ...violation,
+        route: result.route
+      });
     }
   }
 
-  const summary = `## 🔍 Accessibility Audit Report
+  const summary = `# 🔍 Accessibility Audit Report (AAA Level)
 
-### Summary
+## Executive Summary
 ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ⚠️ Found ${totalViolations} total violations:
-- 🔴 Critical: ${criticalCount}
-- 🟠 Serious: ${seriousCount}
-- 🟡 Moderate: ${moderateCount}
-- 🔵 Minor: ${minorCount}
+- 🔴 Critical: ${violationsByLevel.critical.count}
+- 🟠 Serious: ${violationsByLevel.serious.count}
+- 🟡 Moderate: ${violationsByLevel.moderate.count}
+- 🔵 Minor: ${violationsByLevel.minor.count}
 `}
 
-${analysisResults.map(result => `
-### Route: ${result.route}
-${result.violations.length === 0 ? '✅ No violations found' : `
-Found ${result.violations.length} violation(s)
+## Detailed Analysis by Severity
 
-${result.violations.map(v => generateViolationDetails(v)).join('\n')}
+${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
+### ${getSeverityBadge(level)} Issues (${data.count})
+${data.items.map(violation => `
+#### On Route: ${violation.route}
+${generateViolationDetails(violation)}
 
-#### AI Analysis
-${result.aiAnalysis}
-`}`).join('\n\n')}
+##### AI Analysis
+${violation.aiAnalysis}
+`).join('\n')}
+` : '').join('\n')}
 
-### Test Coverage
+## Test Coverage Summary
 - Total Routes Tested: ${analysisResults.length}
 - Total Elements Checked: ${analysisResults.reduce((sum, r) => sum + r.passes.length + r.violations.length + r.incomplete.length + r.inapplicable.length, 0)}
 - Passing Rules: ${analysisResults.reduce((sum, r) => sum + r.passes.length, 0)}
-- Violations: ${totalViolations}
-- Incomplete/Review Needed: ${analysisResults.reduce((sum, r) => sum + r.incomplete.length, 0)}
+- Total Violations: ${totalViolations}
+- Needs Review: ${analysisResults.reduce((sum, r) => sum + r.incomplete.length, 0)}
 
-### Reports
-Detailed JSON reports have been saved to the \`audit-reports\` directory.
+## Testing Configuration
+- WCAG Level: AAA
+- Standards: WCAG 2.0, 2.1, 2.2
+- Best Practices: Included
+- Tool Version: axe-core ${axe.version}
+
+## Reports
+Detailed JSON reports have been saved in the \`audit-reports\` directory.
 
 ---
-🤖 This analysis was performed by the A11y PR Bot using axe-core ${axe.version} and OpenAI GPT-4.
+🤖 This analysis was performed by the A11y PR Bot using axe-core ${axe.version} and Azure OpenAI GPT-4.
 `;
 
   if (isPullRequest) {
@@ -210,19 +265,18 @@ Detailed JSON reports have been saved to the \`audit-reports\` directory.
     await octokit.issues.create({
       owner,
       repo,
-      title: '🔍 Accessibility Audit Results',
+      title: '🔍 Accessibility Audit Results (AAA Level)',
       body: summary,
-      labels: ['accessibility', 'automated-audit']
+      labels: ['accessibility', 'automated-audit', 'wcag-aaa']
     });
   }
 
-  // Create an artifact with the detailed reports
   console.log('Reports saved to audit-reports directory');
 }
 
 async function main() {
   try {
-    console.log('Starting accessibility audit...');
+    console.log('Starting AAA level accessibility audit...');
     const { spawn } = await import('child_process');
     const serve = spawn('npm', ['start'], {
       stdio: 'inherit'
@@ -241,10 +295,6 @@ async function main() {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-gpu',
-        '--disable-audio-output',
-        '--disable-web-audio',
-        '--no-first-run',
-        '--no-zygote',
         '--disable-dev-shm-usage'
       ]
     });
@@ -264,8 +314,11 @@ async function main() {
         console.log(`Auditing route: ${route}`);
         const auditResult = await auditRoute(page, route);
         
+        // Get AI analysis for each violation individually for more detailed insights
         if (auditResult.violations.length > 0) {
-          auditResult.aiAnalysis = await analyzeWithAI(auditResult.violations, route);
+          for (const violation of auditResult.violations) {
+            violation.aiAnalysis = await analyzeWithAI([violation], route);
+          }
         }
         
         results.push(auditResult);
