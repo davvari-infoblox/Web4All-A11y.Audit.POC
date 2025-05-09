@@ -17,6 +17,12 @@ const octokit = new Octokit({
 async function main() {
   try {
     console.log('Starting accessibility fix generation process...');
+    console.log(`Using OpenAI API Key: ${process.env.AZURE_OPENAI_API_KEY}`);
+    console.log(`Using OpenAI Endpoint: ${process.env.AZURE_OPENAI_ENDPOINT}`);
+    console.log(`Using OpenAI API Version: ${process.env.API_VERSION}`);
+    console.log(`Using GitHub Token: ${process.env.GITHUB_TOKEN}`);
+    console.log(`Using GitHub Event Path: ${process.env.GITHUB_EVENT_PATH}`);
+    
     
     // Read GitHub event payload
     const event = JSON.parse(await fs.readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
