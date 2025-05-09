@@ -140,10 +140,46 @@ async function auditRoute(page, route) {
   await page.evaluate(axe.source);
   const results = await page.evaluate((config) => axe.run(document, config), axeConfig);
   
+  console.log(`Results for route ${route}:`, {
+    violations: results.violations.length,
+    passes: results.passes.length,
+    incomplete: results.incomplete.length
+  });
+
+  // Create a more detailed report object
+  const detailedReport = {
+    status: 'completed',
+    timestamp: new Date().toISOString(),
+    route,
+    summary: {
+      violations: results.violations.length,
+      passes: results.passes.length,
+      incomplete: results.incomplete.length,
+      inapplicable: results.inapplicable.length
+    },
+    details: {
+      violations: results.violations.map(violation => ({
+        id: violation.id,
+        impact: violation.impact,
+        description: violation.description,
+        help: violation.help,
+        helpUrl: violation.helpUrl,
+        nodes: violation.nodes.map(node => ({
+          html: node.html,
+          target: node.target,
+          failureSummary: node.failureSummary
+        }))
+      })),
+      passes: results.passes,
+      incomplete: results.incomplete
+    }
+  };
+  
   // Save detailed results to JSON file
   const reportPath = `audit-reports/route${route.replace(/\//g, '-')}-${Date.now()}.json`;
   await fs.mkdir('audit-reports', { recursive: true });
-  await fs.writeFile(reportPath, JSON.stringify(results, null, 2));
+  await fs.writeFile(reportPath, JSON.stringify(detailedReport, null, 2));
+  console.log(`Saved detailed report to ${reportPath}`);
   
   return {
     route,
