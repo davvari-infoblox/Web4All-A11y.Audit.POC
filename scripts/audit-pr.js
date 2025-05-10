@@ -215,12 +215,15 @@ function generateViolationDetails(violation) {
   return `
 #### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
-- **WCAG Level:** ${wcagLevel}
-- **WCAG Success Criteria:** ${violation.tags.filter(tag => tag.startsWith('wcag')).map(tag => wcagLevelMap[tag] || tag).join(', ')}
 - **Help:** ${violation.helpUrl}
 
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
+
+\`\`\`html
+${violation.nodes.map(node => node.html).join('\n')}
+\`\`\`
+
 ${violation.nodes.map(node => `
 #### Element ${node.target.join(' ')}
 - **HTML:** \`${node.html}\`
@@ -240,6 +243,19 @@ async function createComment(analysisResults) {
     minor: { count: 0, items: [] }
   };
 
+  // Get the current branch name
+  let branchName;
+  if (isPullRequest) {
+    branchName = event.pull_request.head.ref;
+  } else {
+    const { data: ref } = await octokit.repos.getBranch({
+      owner,
+      repo,
+      branch: 'HEAD'
+    });
+    branchName = ref.name;
+  }
+
   for (const result of analysisResults) {
     for (const violation of result.violations) {
       totalViolations++;
@@ -251,6 +267,12 @@ async function createComment(analysisResults) {
       });
     }
   }
+
+  // Create report links section
+  const reportLinks = analysisResults.map(result => {
+    const reportUrl = `https://github.com/${owner}/${repo}/blob/${branchName}/${result.reportPath}`;
+    return `- [Route ${result.route} Report](${reportUrl}) - ${result.violations.length} violations found`;
+  }).join('\n');
 
   const summary = `# 🔍 Accessibility Audit Report (AAA Level)
 
@@ -270,12 +292,15 @@ ${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
 ${data.items.map(violation => `
 ### On Route: ${violation.route}
 ${generateViolationDetails(violation)}
- `).join('\n')}
- ` : '').join('\n')}
+`).join('\n')}
+` : '').join('\n')}
 
 ## Reports
-Detailed JSON reports have been saved in the \`audit-reports\` directory.
-`;
+Detailed JSON reports for each route:
+
+${reportLinks}
+
+You can browse all reports in the [audit-reports](https://github.com/${owner}/${repo}/tree/${branchName}/audit-reports) directory.`;
 
   if (isPullRequest) {
     await octokit.issues.createComment({
