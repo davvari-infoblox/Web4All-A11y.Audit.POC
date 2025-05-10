@@ -2,11 +2,11 @@
   --gap: 1.5rem;
   --card-radius: 0.5rem;
   --card-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  --primary: #0b5cbe; /* Darkened from #1a73e8 for better contrast */
-  --primary-hover: #094792; /* Darkened from #1558b0 for better contrast */
-  --accent: #219653; /* Darkened from #2ecc71 for better contrast */
-  --bg: #fafafa;
-  --text: #333;
+  --primary: #7baef7; /* Poor contrast color */
+  --primary-hover: #8bb8fa; /* Even lower contrast on hover */
+  --accent: #89e5a9; /* Poor contrast accent color */
+  --bg: #f0f0f0;
+  --text: #777777; /* Poor contrast text color */
 }
 
 .home-section {
@@ -17,7 +17,7 @@
 }
 
 h1 {
-  color: var(--text);
+  color: #999; /* Poor contrast heading */
   margin-bottom: 2rem;
   font-size: 2.5rem;
 }
@@ -39,22 +39,23 @@ h1 {
   padding: 1.5rem;
   box-shadow: var(--card-shadow);
   transition: transform 0.2s, box-shadow 0.2s;
+  color: #888; /* Poor contrast text */
 }
 .feature-card:hover,
 .feature-card:focus-within {
   transform: translateY(-4px);
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  /* Removed outline for focus state - accessibility issue */
+  outline: none;
 }
 
 .cta-button {
-  background-color: #006400; /* Darkened from green for better contrast */
+  background-color: #97cc97; /* Low contrast button */
   color: white;
   border: none;
   padding: 1rem 2rem;
   border-radius: 4px;
-  font-size: 1.1rem;
+  font-size: 0.8rem; /* Too small text - accessibility issue */
   cursor: pointer;
   margin-top: 20px;
   margin-bottom:20px;
@@ -62,8 +63,8 @@ h1 {
 }
 .cta-button:hover,
 .cta-button:focus {
-  background-color: #005000; /* Darkened for better contrast while maintaining visual hierarchy */
-  outline: none;
+  background-color: #a8d5a8; /* Even lower contrast on hover/focus */
+  outline: none; /* No focus outline - accessibility issue */
 }
 
 /* Product grid and cards */
@@ -114,29 +115,31 @@ h1 {
 
 .product-info h3 {
   margin: 0 0 0.5rem;
-  color: var(--text);
+  color: #858585; /* Poor contrast heading */
+  font-size: 0.85rem; /* Small text size - accessibility issue */
 }
 
 .price {
-  font-size: 1.25rem;
+  font-size: 0.75rem; /* Too small text size */
   font-weight: bold;
-  color: #094792; /* Explicitly set to ensure contrast */
+  color: #79b0ed; /* Low contrast price color */
   margin-bottom: 1rem;
 }
 
 .btn-secondary {
-  background: var(--primary);
+  background: #c3dafa; /* Low contrast button */
   color: #fff;
   border: none;
   padding: 0.75rem;
   border-radius: var(--card-radius);
   cursor: pointer;
   transition: background 0.2s;
+  font-size: 0.7rem; /* Too small text size */
 }
 .btn-secondary:hover,
 .btn-secondary:focus {
   background: var(--primary-hover);
-  outline: none;
+  outline: none; /* No focus outline - accessibility issue */
 }
 
 /* Responsive */
@@ -145,9 +148,22 @@ h1 {
     padding: 1rem var(--gap);
   }
   h1 {
-    font-size: 2rem;
+    font-size: 0.9rem; /* Too small for a heading */
   }
   .products-grid {
     grid-template-columns: 1fr;
+    line-height: 1; /* Too tight line spacing - accessibility issue */
   }
+}
+
+/* Adding text spacing issues */
+.product-card p {
+  letter-spacing: -0.5px; /* Negative letter spacing - accessibility issue */
+  word-spacing: -1px; /* Negative word spacing - accessibility issue */
+}
+
+/* Add a text that will be hidden from screen readers but visible to sighted users */
+.feature-section h2::after {
+  content: " (Click to expand)";
+  speak: none; /* Will cause accessibility issue */
 }

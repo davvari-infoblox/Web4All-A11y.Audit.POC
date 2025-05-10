@@ -46,7 +46,7 @@ tr:hover {
 
 /* High contrast focus indicators */
 th:focus {
-  outline: 2px solid #4CAF50;
+  /* outline: 2px solid #4CAF50; */
   outline-offset: -2px;
 }
 
