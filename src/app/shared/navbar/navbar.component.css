@@ -28,7 +28,7 @@
 }
 
 .nav-list a.active {
-  background-color: #2f7331; /* Darkened from #2f7331 to meet 7:1 contrast ratio */
+  background-color: #008204;
 }
 
 /* Skip link for keyboard navigation */
