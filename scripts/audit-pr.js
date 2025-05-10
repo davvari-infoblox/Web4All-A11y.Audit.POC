@@ -212,6 +212,19 @@ function generateViolationDetails(violation) {
   const wcagLevel = getWCAGLevel(violation.tags);
   const badge = getSeverityBadge(impact);
 
+  const affectedElements = violation.nodes.map(node => {
+    const mustPass = node.any.length ? 
+      '- **Must Pass:**\n' + node.any.map(check => '  - ' + check.message).join('\n') : '';
+    const requiredFixes = node.all.length ? 
+      '- **Required Fixes:**\n' + node.all.map(check => '  - ' + check.message).join('\n') : '';
+    
+    return `#### Element ${node.target.join(' ')}
+- **HTML:** \`${node.html}\`
+- **Impact:** ${node.impact || 'Unknown'}
+${mustPass}
+${requiredFixes}`;
+  }).join('\n\n');
+
   return `
 #### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
@@ -219,15 +232,8 @@ function generateViolationDetails(violation) {
 
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
-\`\`\`html
-${violation.nodes.map(node => `
-  #### Element ${node.target.join(' ')}
-  - **HTML:** \`${node.html}\`
-  - **Impact:** ${node.impact || 'Unknown'}
-  ${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
-  ${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
-  `).join('\n')}
-\`\`\`
+
+${affectedElements}
 
 </details>`;
 }
@@ -312,7 +318,7 @@ async function createComment(analysisResults) {
   const summary = `# 🔍 Accessibility Audit Report (AAA Level)
 
 ## Quick Links
-- [View Full Workflow Run](${workflowUrl})
+- [View Full Workflow Run and Audit Report](${workflowUrl})
 
 ## Executive Summary
 ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
