@@ -90,7 +90,7 @@ textarea:focus-visible {
 }
 
 .submit-button {
-  background-color: #1e4b1f; /* Darkened from #2f7331 to meet 7:1 contrast ratio */
+  background-color: #2f7331; /* Darkened from #2f7331 to meet 7:1 contrast ratio */
   color: white;
   padding: 1rem 2rem;
   border: none;
