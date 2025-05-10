@@ -12,177 +12,133 @@ const openai = new AzureOpenAI({
 });
 
 // Initialize GitHub client
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN,
-});
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+
+// Utility to read JSON event
+async function loadEvent() {
+  return JSON.parse(await fs.readFile(process.env.GITHUB_EVENT_PATH, "utf8"));
+}
 
 async function main() {
-  try {
-    console.log("Starting accessibility fix generation process...");
-    console.log(`Using OpenAI API Key: ${process.env.AZURE_OPENAI_API_KEY}`);
-    console.log(`Using OpenAI Endpoint: ${process.env.AZURE_OPENAI_ENDPOINT}`);
-    console.log(`Using OpenAI API Version: ${process.env.API_VERSION}`);
-    console.log(`Using GitHub Token: ${process.env.GITHUB_TOKEN}`);
-    console.log(`Using GitHub Event Path: ${process.env.GITHUB_EVENT_PATH}`);
+  const event = await loadEvent();
+  if (!event.pull_request) return;
+  const { number: pull_number } = event.pull_request;
+  const owner = event.repository.owner.login;
+  const repo = event.repository.name;
 
-    // Read GitHub event payload
-    const event = JSON.parse(
-      await fs.readFile(process.env.GITHUB_EVENT_PATH, "utf8")
-    );
-    const repo = event.repository.name;
-    const owner = event.repository.owner.login;
-
-    // Handle pull request events
-    if (!event.pull_request) {
-      console.log("Not a pull request event, skipping fix generation");
-      return;
-    }
-
-    const pull_number = event.pull_request.number;
-    console.log(`Processing PR #${pull_number} for ${owner}/${repo}`);
-
-    // Read the audit reports directory
-    const reportsDir = "audit-reports";
-    const reportFiles = await fs.readdir(reportsDir);
-    const jsonReports = reportFiles.filter(
-      (file) => file.endsWith(".json") && !file.includes("state")
-    );
-
-    console.log(`Found ${jsonReports.length} audit report files`);
-
-    // Process each report and generate fixes
-    for (const reportFile of jsonReports) {
-      console.log(`Processing report: ${reportFile}`);
-      const reportPath = path.join(reportsDir, reportFile);
-      const reportContent = await fs.readFile(reportPath, "utf8");
-      const report = JSON.parse(reportContent);
-
-      // Skip if no violations
-      if (
-        !report.details?.violations ||
-        report.details.violations.length === 0
-      ) {
-        console.log(`No violations found in ${reportFile}, skipping`);
-        continue;
-      }
-
-      // Process the violations and generate fixes with OpenAI
-      const violations = report.details.violations;
-      console.log(
-        `Found ${violations.length} violations to fix in ${reportFile}`
-      );
-
-      // Generate fixes using OpenAI
-      const fixes = await generateFixes(violations, report.route);
-
-      // Post the fixes as suggestions on the PR
-      if (fixes && fixes.length > 0) {
-        await postFixesToPR(fixes, owner, repo, pull_number, report.route);
-      }
-    }
-
-    console.log("Accessibility fix generation completed");
-  } catch (error) {
-    console.error("Fix generation failed:", error);
-    process.exit(1);
-  }
-}
-
-async function generateFixes(violations, route) {
-  console.log(
-    `Generating fixes for ${violations.length} violations on route ${route}`
+  // Collect all audit reports
+  const reportsDir = "audit-reports";
+  const files = (await fs.readdir(reportsDir)).filter(
+    (f) => f.endsWith(".json") && !f.includes("state")
   );
+  const allComments = [];
 
-  try {
-    // Create the axeReport object with the violations
-    const axeReport = {
+  for (const file of files) {
+    const {
+      details: { violations },
       route,
-      violations,
-    };
+    } = JSON.parse(await fs.readFile(path.join(reportsDir, file), "utf8"));
+    if (!violations?.length) continue;
 
-    // Call OpenAI to generate fixes
-    const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You generate git-style diff hunks to fix a11y violations.",
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            file: "multiple changed components",
-            axeReport,
-            fixInstructions:
-              "Generate unified-diff patch hunks to fix each violation.",
-          }),
-        },
-      ],
-      functions: [
-        {
-          name: "generate_patch_hunks",
-          description: "Produce git-style diff hunks",
-          parameters: {
-            type: "object",
-            properties: {
-              diff: { type: "string" },
-            },
-            required: ["diff"],
-          },
-        },
-      ],
-      function_call: { name: "generate_patch_hunks" },
+    // Get git diff for this route's file(s)
+    const diffText = getGitDiffForRoute(route);
+
+    // Ask LLM for patch hunks
+    const diff = await generateFixes(violations, diffText);
+
+    // Turn each hunk into a review comment suggestion
+    parseDiffHunks(diff).forEach((h) => {
+      allComments.push({
+        path: h.file, // e.g. "src/components/Button.jsx"
+        line: h.line, // the line number to attach suggestion
+        body: "```suggestion\n" + h.patch + "\n```",
+      });
     });
-
-    // Extract the patch hunks from the response
-    const functionCall = response.choices[0].message.function_call;
-    if (functionCall && functionCall.name === "generate_patch_hunks") {
-      const functionArgs = JSON.parse(functionCall.arguments);
-      return functionArgs.diff;
-    }
-
-    console.log("No function call found in the response");
-    return null;
-  } catch (error) {
-    console.error("Error generating fixes with OpenAI:", error);
-    return null;
   }
-}
 
-async function postFixesToPR(fixes, owner, repo, pull_number, route) {
-  try {
-    // Format the fixes as a PR comment with collapsible sections
-    const commentBody = `## 🔧 A11y Fix Suggestions for Route: ${route}
-
-<details>
-<summary>Click to see suggested fixes</summary>
-
-\`\`\`diff
-${fixes}
-\`\`\`
-
-</details>
-
-These fixes address accessibility violations found during the audit. You can apply these changes manually or use the suggestions.
-
-_Generated by A11y Fix Bot using OpenAI_`;
-
-    // Post the comment to the PR
-    await octokit.issues.createComment({
+  if (allComments.length) {
+    await octokit.pulls.createReview({
       owner,
       repo,
-      issue_number: pull_number,
-      body: commentBody,
+      pull_number,
+      event: "COMMENT",
+      comments: allComments,
     });
-
-    console.log(`Posted fix suggestions to PR #${pull_number}`);
-  } catch (error) {
-    console.error("Error posting fixes to PR:", error);
+    console.log(
+      `Posted ${allComments.length} suggestions to PR #${pull_number}`
+    );
+  } else {
+    console.log("No violations → no suggestions posted");
   }
 }
 
-// Run the main function
-main().catch((error) => {
-  console.error("Unhandled error:", error);
+// Extract git diff for relevant files (simple example)
+function getGitDiffForRoute(route) {
+  // You can refine this to map "route" → specific file path(s).
+  // For demo, grab full diff:
+  return require("child_process")
+    .execSync(`git diff origin/main...HEAD`)
+    .toString();
+}
+
+async function generateFixes(violations, diff) {
+  const response = await openai.chat.completions.create({
+    model: process.env.AZURE_OPENAI_DEPLOYMENT,
+    messages: [
+      {
+        role: "system",
+        content: "You generate git-style diff hunks to fix a11y violations.",
+      },
+      {
+        role: "user",
+        content: JSON.stringify({ axeReport: { violations }, diff }),
+      },
+    ],
+    functions: [
+      {
+        name: "generate_patch_hunks",
+        description: "Produce git-style diff hunks",
+        parameters: {
+          type: "object",
+          properties: { diff: { type: "string" } },
+          required: ["diff"],
+        },
+      },
+    ],
+    function_call: { name: "generate_patch_hunks" },
+  });
+
+  const call = response.choices[0].message.function_call;
+  return call ? JSON.parse(call.arguments).diff : "";
+}
+
+// Parse a unified-diff into discrete hunks with file & line info
+function parseDiffHunks(diffText) {
+  const hunks = [];
+  const lines = diffText.split("\n");
+  let current = null;
+  for (const line of lines) {
+    const fileMatch = /^diff --git a\/(.+?) b\/(.+)$/.exec(line);
+    if (fileMatch) {
+      if (current) hunks.push(current);
+      current = { file: fileMatch[2], patch: "", line: null };
+      continue;
+    }
+    const hunkHeader = /^@@ -\d+,\d+ \+(\d+),\d+ @@/.exec(line);
+    if (hunkHeader && current) {
+      current.line = parseInt(hunkHeader[1], 10);
+      current.patch += line + "\n";
+      continue;
+    }
+    if (current) {
+      current.patch += line + "\n";
+    }
+  }
+  if (current) hunks.push(current);
+  return hunks;
+}
+
+main().catch((err) => {
+  console.error(err);
   process.exit(1);
 });
