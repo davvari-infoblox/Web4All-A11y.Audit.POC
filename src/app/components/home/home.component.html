@@ -1,0 +1,51 @@
+<section class="home-section">
+
+  <h1>Welcome to our Adventure shopping</h1>
+  
+  <div class="feature-section" role="region" aria-labelledby="features-heading">
+    <h2 id="features-heading">Why Shop with Adventure Outfitters?</h2>
+    <div class="features-grid">
+      <div class="feature-card" tabindex="0">
+        <h3>Explore with Confidence</h3>
+        <p>Our curated selection of gear—from rugged mountain bikes to ultralight tents—is tested in the wild so you can push your limits without worrying about your equipment failing.</p>
+      </div>
+      <div class="feature-card" tabindex="0">
+        <h3>Gear That Goes the Distance</h3>
+        <p>Every product we carry meets strict durability and performance standards. Whether you’re tackling steep trails or camping off‑grid, our gear stands up to the elements.</p>
+      </div>
+      <div class="feature-card" tabindex="0">
+        <h3> Expert Adventure Advice </h3>
+        <p>Our team of outdoor enthusiasts and professional guides share insider tips and packing checklists—so you spend less time planning and more time exploring.</p>
+      </div>
+      <div class="feature-card" tabindex="0">
+        <h3>Eco‑Friendly & Ethical</h3>
+        <p>We partner with brands committed to sustainable materials and fair labor practices. Outfit your journey knowing you’re protecting the places you love to explore.</p>
+      </div>
+    </div>
+  </div>
+  
+
+  <div class="cta-section" role="region" aria-labelledby="cta-heading">
+    <h2 id="cta-heading">Get Started</h2>
+    <button class="cta-button" 
+            (click)="navigateToProducts()" 
+            aria-label="View our products">
+      View Products List
+    </button>
+  </div>
+  
+  <section id="products" class="products-section" aria-labelledby="products-title">
+    <h2 id="products-title">Our Products Overview</h2>
+    <div class="products-grid">
+      <article *ngFor="let p of products" class="product-card" tabindex="0">
+        <div class="product-image-wrapper">
+          <img class="product-image" [src]="p.img" [alt]="p.alt" />
+        </div>
+        <div class="product-info">
+          <h3>{{ p.name }}</h3>
+          <p class="price">{{ p.price | currency:'USD':'symbol' }}</p>
+        </div>
+      </article>
+    </div>
+  </section>
+</section>

@@ -1,0 +1,76 @@
+<div class="about-section">
+  <h1>About Us</h1>
+  
+  <section aria-labelledby="mission-heading">
+    <h2 id="mission-heading">Our Mission</h2>
+    <p>We are committed to creating fully accessible web experiences that everyone can use, regardless of their abilities.</p>
+  </section>
+
+  <section class="team-section" aria-labelledby="team-heading">
+    <h2 id="team-heading">Our Team</h2>
+    <ul class="team-grid">
+      <li class="team-member" tabindex="0">
+        <img src="assets/deepak.jpg" alt="Deepak Avvari" class="team-image">
+        <h3>Deepak Avvari</h3>
+        <p>Senior Software Engineer</p>
+      </li>
+      <li class="team-member" tabindex="0">
+        <img src="assets/abhipsa.jpg" alt="Abhipsa Mohapatra" class="team-image">
+        <h3>Abhipsa Mohapatra</h3>
+        <p>Software Engineer</p>
+      </li>
+    </ul>      
+  </section>
+
+  <section class="contact-section" aria-labelledby="contact-heading">
+    <h2 id="contact-heading">Contact Us</h2>
+    <form class="contact-form" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="name">Name:</label>
+        <input 
+          type="text" 
+          id="name" 
+          name="name" 
+          [(ngModel)]="contactForm.name"
+          required
+          aria-required="true">
+      </div>
+      
+      <div class="form-group">
+        <label for="email">Email:</label>
+        <input 
+          type="email" 
+          id="email" 
+          name="email"
+          [(ngModel)]="contactForm.email"
+          required
+          aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="message">Message:</label>
+        <textarea 
+          id="message" 
+          name="message"
+          [(ngModel)]="contactForm.message"
+          required
+          aria-required="true"
+          rows="4"></textarea>
+      </div>
+
+      <button 
+        type="submit"
+        class="submit-button"
+        [attr.aria-busy]="submitting">
+        {{submitting ? 'Sending...' : 'Send Message'}}
+      </button>
+
+      <div *ngIf="submitSuccess" 
+           role="alert" 
+           class="success-message" 
+           aria-live="polite">
+        Thank you for your message. We'll get back to you soon!
+      </div>
+    </form>
+  </section>
+</div>

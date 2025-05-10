@@ -1,0 +1,70 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* Global styles with accessibility considerations */
+:root {
+  --primary-color: #4CAF50;
+  --primary-dark: #45a049;
+  --text-color: #333;
+  --background-color: #fff;
+  --focus-outline-color: #000;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--background-color);
+}
+
+/* Focus styles for better visibility */
+:focus {
+  outline: 3px solid var(--focus-outline-color);
+  outline-offset: 2px;
+}
+
+/* Skip link styles */
+.skip-link:focus {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+/* Improved color contrast for better readability */
+a {
+  color: #1a73e8;
+}
+
+a:hover {
+  color: #1557b0;
+}
+
+/* Utility class for screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Reduced motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
