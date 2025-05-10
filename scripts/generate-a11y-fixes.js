@@ -4,15 +4,13 @@ import { AzureOpenAI } from "openai";
 import { promises as fs } from "fs";
 import path from "path";
 
-// Initialize Azure OpenAI client
+// Initialize clients
 const openai = new AzureOpenAI({
   apiKey: process.env.AZURE_OPENAI_API_KEY,
   endpoint: process.env.AZURE_OPENAI_ENDPOINT,
   deployment: "gpt-4.1-mini", // your deployment name in Azure
   apiVersion: process.env.API_VERSION,
 });
-
-// Initialize GitHub client
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 async function main() {
@@ -21,45 +19,51 @@ async function main() {
   );
   if (!event.pull_request) return;
 
-  const { number: pull_number } = event.pull_request;
+  const pull_number = event.pull_request.number;
   const owner = event.repository.owner.login;
   const repo = event.repository.name;
   const baseSha = event.pull_request.base.sha;
   const headSha = event.pull_request.head.sha;
 
-  console.log(
-    `Generating suggestions for PR #${pull_number}: ${baseSha} → ${headSha}`
-  );
+  // Fetch base commit so diff works
+  execSync(`git fetch origin ${baseSha}`, { stdio: "ignore" });
 
-  // Ensure full git history so SHAs exist
-  execSync(`git fetch origin ${baseSha}`);
-
-  // Read audit reports
+  // Read reports
   const reportsDir = "audit-reports";
   const reportFiles = (await fs.readdir(reportsDir)).filter(
     (f) => f.endsWith(".json") && !f.includes("state")
   );
+
   const suggestions = [];
+  const seen = new Set();
 
   for (const file of reportFiles) {
-    const { route, details: { violations = [] } = {} } = JSON.parse(
+    const report = JSON.parse(
       await fs.readFile(path.join(reportsDir, file), "utf8")
     );
+    const violations = report.details?.violations || [];
     if (!violations.length) continue;
 
+    // Get diff between base and head
     const diffText = execSync(`git diff --no-color ${baseSha} ${headSha}`, {
       encoding: "utf-8",
     });
-
-    // Ask LLM to generate diff hunks
+    // Generate patch hunks from LLM
     const patch = await generateFixes(violations, diffText);
 
-    // Parse and create suggestions per changed line
-    parseDiffHunks(patch).forEach((change) => {
-      // One suggestion per removed line replaced
-      change.changes.forEach(({ oldLine, newText }) => {
+    // Parse hunks into individual line changes
+    const hunks = parseDiffHunks(patch);
+    for (const hunk of hunks) {
+      for (const change of hunk.changes) {
+        const { file: filePath, oldLine, newText } = change;
+        if (newText == null || newText.trim() === "") continue; // skip empty or null
+
+        const key = `${filePath}:${oldLine}:${newText}`;
+        if (seen.has(key)) continue; // dedupe
+        seen.add(key);
+
         suggestions.push({
-          path: change.file,
+          path: filePath,
           line: oldLine,
           body: `
 \`\`\`suggestion
@@ -67,8 +71,8 @@ ${newText}
 \`\`\`
 `,
         });
-      });
-    });
+      }
+    }
   }
 
   if (suggestions.length) {
@@ -83,7 +87,7 @@ ${newText}
       `Posted ${suggestions.length} suggestions to PR #${pull_number}`
     );
   } else {
-    console.log("No accessibility violations found");
+    console.log("No accessibility suggestions generated.");
   }
 }
 
@@ -120,7 +124,6 @@ async function generateFixes(violations, diff) {
 function parseDiffHunks(diffText) {
   const hunks = [];
   let current = null;
-
   diffText.split("\n").forEach((line) => {
     const fileMatch = /^diff --git a\/(.+?) b\/(.+)$/.exec(line);
     if (fileMatch) {
@@ -133,28 +136,25 @@ function parseDiffHunks(diffText) {
       };
       return;
     }
-
     const header = /^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/.exec(line);
     if (header && current) {
       current.oldLine = parseInt(header[1], 10);
       current.newLine = parseInt(header[3], 10);
       return;
     }
-
     if (!current) return;
     if (line.startsWith("-") && !line.startsWith("---")) {
-      // original line removed; record position
-      current.changes.push({ oldLine: current.oldLine, newText: null });
+      current.changes.push({
+        file: current.file,
+        oldLine: current.oldLine,
+        newText: null,
+      });
       current.oldLine++;
     } else if (line.startsWith("+") && !line.startsWith("+++")) {
-      // added line; pair with previous removal
       const last = current.changes[current.changes.length - 1];
-      if (last && last.newText === null) {
-        last.newText = line.slice(1);
-      }
+      if (last && last.newText === null) last.newText = line.slice(1);
       current.newLine++;
-    } else if (!line.startsWith("+") && !line.startsWith("-")) {
-      // context line
+    } else {
       current.oldLine++;
       current.newLine++;
     }
