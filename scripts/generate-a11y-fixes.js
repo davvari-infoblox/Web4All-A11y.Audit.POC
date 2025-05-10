@@ -56,17 +56,22 @@ async function main() {
         const { file: filePath, oldLine, newText } = change;
         if (!newText || !newText.trim()) continue;
 
-        await octokit.pulls.createReviewComment({
-          owner,
-          repo,
-          pull_number,
-          commit_id: headSha,
-          path: filePath,
-          side: "RIGHT",
-          line: oldLine,
-          body: `\n\`\`\`suggestion
-${newText}\n\`\`\`\n`,
-        });
+        try {
+          await octokit.pulls.createReviewComment({
+            owner,
+            repo,
+            pull_number,
+            commit_id: headSha,
+            path: filePath,
+            side: "RIGHT",
+            line: oldLine,
+            body: `\n\`\`\`suggestion
+  ${newText}\n\`\`\`\n`,
+          });
+        } catch (err) {
+          console.error("Error posting comment:", err);
+          continue;
+        }
         console.log(`Posted suggestion for ${filePath}:${oldLine}`);
       }
     }
