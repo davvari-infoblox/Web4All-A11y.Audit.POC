@@ -4,6 +4,12 @@ import { AzureOpenAI } from "openai";
 import { promises as fs } from "fs";
 import path from "path";
 
+// Load and parse the GitHub event payload
+async function loadEvent() {
+  const data = await fs.readFile(process.env.GITHUB_EVENT_PATH, "utf8");
+  return JSON.parse(data);
+}
+
 // Initialize Azure OpenAI client
 const openai = new AzureOpenAI({
   apiKey: process.env.AZURE_OPENAI_API_KEY,
@@ -16,20 +22,27 @@ const openai = new AzureOpenAI({
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 async function main() {
-  const event = JSON.parse(
-    await fs.readFile(process.env.GITHUB_EVENT_PATH, "utf8")
-  );
-  if (!event.pull_request) return;
-  const { number: pull_number } = event.pull_request;
+  const event = await loadEvent();
+  if (!event.pull_request) {
+    console.log("Not a pull request event, skipping");
+    return;
+  }
+
+  const pull_number = event.pull_request.number;
   const owner = event.repository.owner.login;
   const repo = event.repository.name;
+  const baseSha = event.pull_request.base.sha;
+  const headSha = event.pull_request.head.sha;
 
+  console.log(`PR #${pull_number} changes: ${baseSha} → ${headSha}`);
+
+  // Read all audit report files
   const reportsDir = "audit-reports";
   const files = (await fs.readdir(reportsDir)).filter(
     (f) => f.endsWith(".json") && !f.includes("state")
   );
-  const allComments = [];
 
+  const comments = [];
   for (const file of files) {
     const report = JSON.parse(
       await fs.readFile(path.join(reportsDir, file), "utf8")
@@ -38,40 +51,41 @@ async function main() {
     const route = report.route || "";
     if (!violations.length) continue;
 
-    const diffText = getGitDiffForRoute();
-    const diff = await generateFixes(violations, diffText);
-    parseDiffHunks(diff).forEach((h) => {
-      allComments.push({
+    // Calculate diff between the PR base and head commits
+    const diffText = getGitDiffForPR(baseSha, headSha);
+    const patchDiff = await generateFixes(violations, diffText);
+
+    // Convert each hunk to a GitHub suggestion
+    parseDiffHunks(patchDiff).forEach((h) => {
+      comments.push({
         path: h.file,
         line: h.line,
         body: `
 \`\`\`suggestion
-${h.patch.trimEnd()}
+${h.patch.trim()}
 \`\`\`
 `,
       });
     });
   }
 
-  if (allComments.length) {
+  if (comments.length) {
     await octokit.pulls.createReview({
       owner,
       repo,
       pull_number,
       event: "COMMENT",
-      comments: allComments,
+      comments,
     });
-    console.log(
-      `Posted ${allComments.length} suggestions to PR #${pull_number}`
-    );
+    console.log(`Posted ${comments.length} suggestions to PR #${pull_number}`);
   } else {
-    console.log("No violations → no suggestions posted");
+    console.log("No A11y violations → no suggestions posted");
   }
 }
 
-function getGitDiffForRoute() {
-  // Get diff from main to HEAD for changed files
-  return execSync(`git diff origin/main...HEAD`, { encoding: "utf-8" });
+// Perform a git diff between the PR's base and head SHAs
+function getGitDiffForPR(base, head) {
+  return execSync(`git diff --no-color ${base} ${head}`, { encoding: "utf-8" });
 }
 
 async function generateFixes(violations, diff) {
@@ -107,23 +121,22 @@ async function generateFixes(violations, diff) {
 
 function parseDiffHunks(diffText) {
   const hunks = [];
-  const lines = diffText.split("\n");
   let current = null;
-  for (const line of lines) {
+  diffText.split("\n").forEach((line) => {
     const fileMatch = /^diff --git a\/(.+?) b\/(.+)$/.exec(line);
     if (fileMatch) {
       if (current) hunks.push(current);
       current = { file: fileMatch[2], patch: "", line: null };
-      continue;
+      return;
     }
     const hunkHeader = /^@@ -\d+,\d+ \+(\d+),\d+ @@/.exec(line);
     if (hunkHeader && current) {
       current.line = parseInt(hunkHeader[1], 10);
       current.patch += line + "\n";
-      continue;
+      return;
     }
     if (current) current.patch += line + "\n";
-  }
+  });
   if (current) hunks.push(current);
   return hunks;
 }
