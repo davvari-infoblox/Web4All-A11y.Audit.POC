@@ -220,7 +220,7 @@ function generateViolationDetails(violation) {
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
 
-\`\`\`html
+\`html
 ${violation.nodes.map(node => `
   #### Element ${node.target.join(' ')}
   - **HTML:** \`${node.html}\`
@@ -228,7 +228,7 @@ ${violation.nodes.map(node => `
   ${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
   ${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
   `).join('\n')}
-\`\`\`
+\`
 
 </details>`;
 }
@@ -242,10 +242,8 @@ async function createComment(analysisResults) {
     minor: { count: 0, items: [] }
   };
 
-  // Get the current branch name and workflow run ID
+  // Get the current branch name
   let branchName;
-  const runId = process.env.GITHUB_RUN_ID;
-  const workflowUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
 
   if (isPullRequest) {
     branchName = event.pull_request.head.ref;
@@ -278,9 +276,6 @@ async function createComment(analysisResults) {
 
   const summary = `# 🔍 Accessibility Audit Report (AAA Level)
 
-## Quick Links
-- [View Full Workflow Run](${workflowUrl})
-- [Browse All Reports](https://github.com/${owner}/${repo}/tree/${branchName}/audit-reports)
 
 ## Executive Summary
 ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
