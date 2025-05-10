@@ -221,16 +221,15 @@ function generateViolationDetails(violation) {
 <summary>Affected Elements (${violation.nodes.length})</summary>
 
 \`\`\`html
-${violation.nodes.map(node => node.html).join('\n')}
+${violation.nodes.map(node => `
+  #### Element ${node.target.join(' ')}
+  - **HTML:** \`${node.html}\`
+  - **Impact:** ${node.impact || 'Unknown'}
+  ${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
+  ${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
+  `).join('\n')}
 \`\`\`
 
-${violation.nodes.map(node => `
-#### Element ${node.target.join(' ')}
-- **HTML:** \`${node.html}\`
-- **Impact:** ${node.impact || 'Unknown'}
-${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
-${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
-`).join('\n')}
 </details>`;
 }
 
@@ -243,8 +242,11 @@ async function createComment(analysisResults) {
     minor: { count: 0, items: [] }
   };
 
-  // Get the current branch name
+  // Get the current branch name and workflow run ID
   let branchName;
+  const runId = process.env.GITHUB_RUN_ID;
+  const workflowUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+
   if (isPullRequest) {
     branchName = event.pull_request.head.ref;
   } else {
@@ -276,6 +278,10 @@ async function createComment(analysisResults) {
 
   const summary = `# 🔍 Accessibility Audit Report (AAA Level)
 
+## Quick Links
+- [View Full Workflow Run](${workflowUrl})
+- [Browse All Reports](https://github.com/${owner}/${repo}/tree/${branchName}/audit-reports)
+
 ## Executive Summary
 ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ⚠️ Found ${totalViolations} total violations:
@@ -288,7 +294,7 @@ ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ## Detailed Analysis by Severity
 
 ${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
-#### ${getSeverityBadge(level)} Issues (${data.count})
+
 ${data.items.map(violation => `
 ### On Route: ${violation.route}
 ${generateViolationDetails(violation)}
