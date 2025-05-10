@@ -220,7 +220,7 @@ function generateViolationDetails(violation) {
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
 
-\`html
+\`\`html
 ${violation.nodes.map(node => `
   #### Element ${node.target.join(' ')}
   - **HTML:** \`${node.html}\`
@@ -228,9 +228,46 @@ ${violation.nodes.map(node => `
   ${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
   ${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
   `).join('\n')}
-\`
+\`\`html
 
 </details>`;
+}
+
+async function generateFinalReport(analysisResults) {
+  const finalReport = {
+    status: 'completed',
+    timestamp: new Date().toISOString(),
+    summary: {
+      totalViolations: 0,
+      violationsByLevel: {
+        critical: 0,
+        serious: 0,
+        moderate: 0,
+        minor: 0
+      }
+    },
+    routeResults: []
+  };
+
+  for (const result of analysisResults) {
+    finalReport.routeResults.push({
+      route: result.route,
+      violations: result.violations,
+      passes: result.passes,
+      incomplete: result.incomplete,
+      inapplicable: result.inapplicable
+    });
+
+    for (const violation of result.violations) {
+      finalReport.summary.totalViolations++;
+      const level = violation.impact || 'minor';
+      finalReport.summary.violationsByLevel[level]++;
+    }
+  }
+
+  const reportPath = `audit-reports/final-report-${Date.now()}.json`;
+  await fs.writeFile(reportPath, JSON.stringify(finalReport, null, 2));
+  return reportPath;
 }
 
 async function createComment(analysisResults) {
@@ -242,8 +279,10 @@ async function createComment(analysisResults) {
     minor: { count: 0, items: [] }
   };
 
-  // Get the current branch name
+  // Get the current branch name and workflow run ID
   let branchName;
+  const runId = process.env.GITHUB_RUN_ID;
+  const workflowUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
 
   if (isPullRequest) {
     branchName = event.pull_request.head.ref;
@@ -255,6 +294,9 @@ async function createComment(analysisResults) {
     });
     branchName = ref.name;
   }
+
+  // Generate the final combined report
+  const finalReportPath = await generateFinalReport(analysisResults);
 
   for (const result of analysisResults) {
     for (const violation of result.violations) {
@@ -268,14 +310,12 @@ async function createComment(analysisResults) {
     }
   }
 
-  // Create report links section
-  const reportLinks = analysisResults.map(result => {
-    const reportUrl = `https://github.com/${owner}/${repo}/blob/${branchName}/${result.reportPath}`;
-    return `- [Route ${result.route} Report](${reportUrl}) - ${result.violations.length} violations found`;
-  }).join('\n');
-
   const summary = `# 🔍 Accessibility Audit Report (AAA Level)
 
+## Quick Links
+- [View Full Workflow Run](${workflowUrl})
+- [⬇️ Download Complete Report](https://github.com/${owner}/${repo}/raw/${branchName}/${finalReportPath})
+- [Browse All Reports](https://github.com/${owner}/${repo}/tree/${branchName}/audit-reports)
 
 ## Executive Summary
 ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
@@ -297,9 +337,6 @@ ${generateViolationDetails(violation)}
 ` : '').join('\n')}
 
 ## Reports
-Detailed JSON reports for each route:
-
-${reportLinks}
 
 You can browse all reports in the [audit-reports](https://github.com/${owner}/${repo}/tree/${branchName}/audit-reports) directory.`;
 
