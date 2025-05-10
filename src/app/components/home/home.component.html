@@ -1,7 +1,13 @@
 <section class="home-section">
+  <!-- Issue 1: Missing alt text on image -->
+  <img src="assets/banner.jpg" class="banner-image">
+  
   <h1>Welcome to our Adventure shopping</h1>
   
   <div class="feature-section" role="region" aria-labelledby="features-heading">
+    <!-- Issue 2: Empty button with no accessible name -->
+    <button onclick="toggleFeatures()" class="toggle-features-btn"></button>
+    
     <h2 id="features-heading">Why Shop with Adventure Outfitters?</h2>
     <div class="features-grid">
       <div class="feature-card" tabindex="0">
@@ -51,4 +57,4 @@
       </article>
     </div>
   </section>
-  
+</section>
