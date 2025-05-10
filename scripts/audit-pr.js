@@ -227,15 +227,28 @@ async function createComment(analysisResults) {
     minor: { count: 0, items: [] }
   };
   
+  // New structure: Organize violations by route first
+  const violationsByRoute = {};
+  
   for (const result of analysisResults) {
+    // Initialize route entry if it doesn't exist
+    if (!violationsByRoute[result.route]) {
+      violationsByRoute[result.route] = [];
+    }
+    
     for (const violation of result.violations) {
       totalViolations++;
       const level = violation.impact || 'minor';
       violationsByLevel[level].count++;
+      
+      // Add to both the severity-based and route-based collections
       violationsByLevel[level].items.push({
         ...violation,
         route: result.route
       });
+      
+      // Add to route-based collection
+      violationsByRoute[result.route].push(violation);
     }
   }
 
@@ -250,15 +263,14 @@ ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 - 🔵 Minor: ${violationsByLevel.minor.count}
 `}
 
-## Detailed Analysis by Severity
+## Detailed Analysis by Route
 
-${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
-#### ${getSeverityBadge(level)} Issues (${data.count})
-${data.items.map(violation => `
-### On Route: ${violation.route}
+${Object.entries(violationsByRoute).map(([route, violations]) => violations.length ? `
+### Route: ${route}
+${violations.map(violation => `
 ${generateViolationDetails(violation)}
- `).join('\n')}
- ` : '').join('\n')}
+`).join('\n')}
+` : '').join('\n')}
 
 ## Reports
 Detailed JSON reports have been saved in the \`audit-reports\` directory.
