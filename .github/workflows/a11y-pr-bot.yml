@@ -69,6 +69,7 @@ jobs:
           API_VERSION: 2025-01-01-preview
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
           PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
         run: |
