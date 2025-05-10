@@ -102,7 +102,7 @@ textarea:focus-visible {
 
 .submit-button:hover,
 .submit-button:focus {
-  background-color: #173b18; /* Even darker green for hover/focus state */
+  background-color: #245d27;
   outline: 2px solid #333;
   outline-offset: 2px;
 }
