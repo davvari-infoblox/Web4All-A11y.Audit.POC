@@ -28,18 +28,6 @@ if (event.pull_request) {
   pull_number = event.pull_request.number;
 }
 
-// WCAG Level mapping
-const wcagLevelMap = {
-  'wcag2a': 'WCAG 2.0 Level A',
-  'wcag2aa': 'WCAG 2.0 Level AA',
-  'wcag2aaa': 'WCAG 2.0 Level AAA',
-  'wcag21a': 'WCAG 2.1 Level A',
-  'wcag21aa': 'WCAG 2.1 Level AA',
-  'wcag21aaa': 'WCAG 2.1 Level AAA',
-  'wcag22aa': 'WCAG 2.2 Level AA',
-  'best-practice': 'Best Practice'
-};
-
 const axeConfig = {
   runOnly: {
     type: 'tag',
@@ -216,12 +204,21 @@ function generateViolationDetails(violation) {
 #### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
 - **WCAG Level:** ${wcagLevel}
-- **Impact:** ${impact}
-- **WCAG Success Criteria:** ${violation.tags.filter(tag => tag.startsWith('wcag')).map(tag => wcagLevelMap[tag] || tag).join(', ')}
+- **Help:** ${violation.helpUrl}
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
+\`\`\`html
+${violation.nodes.map(node => node.html).join('\n')}
+\`\`\`
 
-**Help:** ${violation.helpUrl}
+${violation.nodes.map(node => `
+#### Element ${node.target.join(' ')}
+- **HTML:** \`${node.html}\`
+- **Fix Summary:** ${node.failureSummary}
+- **Impact:** ${node.impact || 'Unknown'}
+${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
+${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
+`).join('\n')}
 </details>`;
 }
 

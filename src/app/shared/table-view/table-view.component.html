@@ -1,0 +1,51 @@
+<div class="table-responsive" role="region" aria-label="Products table">
+  <table role="table">
+    <caption>{{caption}}</caption>
+    <thead>
+      <tr role="row">
+        <th role="columnheader" 
+            scope="col" 
+            [attr.aria-sort]="getAriaSortValue('name')"
+            (click)="sortData('name')"
+            (keydown.enter)="sortData('name')"
+            tabindex="0">
+          Name
+          <span class="sort-icon" *ngIf="sortColumn === 'name'">
+            {{sortDirection === 'asc' ? '▲' : '▼'}}
+          </span>
+        </th>
+        <th role="columnheader" 
+            scope="col"
+            [attr.aria-sort]="getAriaSortValue('category')"
+            (click)="sortData('category')"
+            (keydown.enter)="sortData('category')"
+            tabindex="0">
+          Category
+          <span class="sort-icon" *ngIf="sortColumn === 'category'">
+            {{sortDirection === 'asc' ? '▲' : '▼'}}
+          </span>
+        </th>
+        <th role="columnheader" 
+            scope="col"
+            [attr.aria-sort]="getAriaSortValue('price')"
+            (click)="sortData('price')"
+            (keydown.enter)="sortData('price')"
+            tabindex="0">
+          Price
+          <span class="sort-icon" *ngIf="sortColumn === 'price'">
+            {{sortDirection === 'asc' ? '▲' : '▼'}}
+          </span>
+        </th>
+        <th role="columnheader" scope="col">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr role="row" *ngFor="let product of products; let i = index" [attr.aria-rowindex]="i + 1">
+        <td role="cell">{{product.name}}</td>
+        <td role="cell">{{product.category}}</td>
+        <td role="cell">${{product.price.toFixed(2)}}</td>
+        <td role="cell">{{product.description}}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

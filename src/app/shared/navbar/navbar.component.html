@@ -1,0 +1,21 @@
+<nav class="nav-container" role="navigation" aria-label="Main navigation">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <ul class="nav-list">
+    <li>
+      <a [routerLink]="['']" 
+         routerLinkActive="active" 
+         [routerLinkActiveOptions]="{exact: true}"
+         aria-label="Home">Home</a>
+    </li>
+    <li>
+      <a [routerLink]="['/products']" 
+         routerLinkActive="active"
+         aria-label="Products">Products</a>
+    </li>
+    <li>
+      <a [routerLink]="['/about']" 
+         routerLinkActive="active"
+         aria-label="About Us">About</a>
+    </li>
+  </ul>
+</nav>
