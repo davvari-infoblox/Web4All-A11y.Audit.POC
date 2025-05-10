@@ -8,23 +8,23 @@
 
   <section class="team-section" aria-labelledby="team-heading">
     <h2 id="team-heading">Our Team</h2>
-    <div class="team-grid" role="list">
-      <div class="team-member" role="listitem" tabindex="0">
-        <img src="assets/abhipsa.jpeg" alt="Deepak Avvari" class="team-image">
+    <ul class="team-grid">
+      <li class="team-member" tabindex="0">
+        <img src="assets/deepak.jpg" alt="Deepak Avvari" class="team-image">
         <h3>Deepak Avvari</h3>
         <p>Senior Software Engineer</p>
-      </div>
-      <div class="team-member" role="listitem" tabindex="0">
+      </li>
+      <li class="team-member" tabindex="0">
         <img src="assets/abhipsa.jpeg" alt="Abhipsa Mohapatra" class="team-image">
         <h3>Abhipsa Mohapatra</h3>
         <p>Software Engineer</p>
-      </div>
-    </div>      
+      </li>
+    </ul>      
   </section>
 
   <section class="contact-section" aria-labelledby="contact-heading">
     <h2 id="contact-heading">Contact Us</h2>
-    <form class="contact-form" (ngSubmit)="onSubmit()" role="form">
+    <form class="contact-form" (ngSubmit)="onSubmit()">
       <div class="form-group">
         <label for="name">Name:</label>
         <input 

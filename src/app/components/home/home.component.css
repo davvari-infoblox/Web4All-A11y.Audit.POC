@@ -2,9 +2,9 @@
   --gap: 1.5rem;
   --card-radius: 0.5rem;
   --card-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  --primary: #1a73e8;
-  --primary-hover: #1558b0;
-  --accent: #2ecc71;
+  --primary: #0b5cbe; /* Darkened from #1a73e8 for better contrast */
+  --primary-hover: #094792; /* Darkened from #1558b0 for better contrast */
+  --accent: #219653; /* Darkened from #2ecc71 for better contrast */
   --bg: #fafafa;
   --text: #333;
 }
@@ -49,7 +49,7 @@ h1 {
 }
 
 .cta-button {
-  background-color: green;
+  background-color: #006400; /* Darkened from green for better contrast */
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -62,7 +62,7 @@ h1 {
 }
 .cta-button:hover,
 .cta-button:focus {
-  background-color: #27ae60;
+  background-color: #005000; /* Darkened for better contrast while maintaining visual hierarchy */
   outline: none;
 }
 
@@ -120,7 +120,7 @@ h1 {
 .price {
   font-size: 1.25rem;
   font-weight: bold;
-  color: var(--primary-hover);
+  color: #094792; /* Explicitly set to ensure contrast */
   margin-bottom: 1rem;
 }
 

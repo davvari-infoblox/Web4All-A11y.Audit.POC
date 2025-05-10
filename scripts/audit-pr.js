@@ -207,14 +207,10 @@ function generateViolationDetails(violation) {
 - **Help:** ${violation.helpUrl}
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
-\`\`\`html
-${violation.nodes.map(node => node.html).join('\n')}
-\`\`\`
 
 ${violation.nodes.map(node => `
 #### Element ${node.target.join(' ')}
 - **HTML:** \`${node.html}\`
-- **Fix Summary:** ${node.failureSummary}
 - **Impact:** ${node.impact || 'Unknown'}
 ${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
 ${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}

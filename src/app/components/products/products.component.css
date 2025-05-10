@@ -10,12 +10,12 @@ h1 {
 .loading-indicator {
   text-align: center;
   padding: 2rem;
-  color: #666;
+  color: #545454; /* Darkened from #666 to meet 4.5:1 contrast ratio requirement */
 }
 
 .error-message {
   background-color: #ffebee;
-  color: #c62828;
+  color: #9a0000; /* Darkened from #c62828 to ensure better contrast with the background */
   padding: 1rem;
   border-radius: 4px;
   margin: 1rem 0;
