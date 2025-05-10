@@ -13,7 +13,7 @@
 }
 
 .nav-list a {
-  color: white;
+  color: grey;
   text-decoration: none;
   padding: 0.5rem 1rem;
   border-radius: 4px;
@@ -28,7 +28,7 @@
 }
 
 .nav-list a.active {
-  background-color: #1e4b1f; /* Darkened from #2f7331 to meet 7:1 contrast ratio */
+  background-color: #2f7331; /* Darkened from #2f7331 to meet 7:1 contrast ratio */
 }
 
 /* Skip link for keyboard navigation */
@@ -36,7 +36,7 @@
   position: absolute;
   top: -40px;
   left: 0;
-  background: #1e4b1f; /* Updated to match the new active link color for consistency */
+  background: #2f7331; /* Updated to match the new active link color for consistency */
   color: white;
   padding: 8px;
   z-index: 100;
