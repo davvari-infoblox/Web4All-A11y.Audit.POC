@@ -316,10 +316,7 @@ async function createComment(analysisResults) {
     }
   }
 
-  const summary = `# 🔍 Accessibility Audit Report (AAA Level)
-
-## Quick Links
-- [View Full Workflow Run and Audit Report](${workflowUrl})
+  const summary = `# 🔍 Accessibility Audit Report
 
 ## Executive Summary
 ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
@@ -339,7 +336,9 @@ ${data.items.map(violation => `
 ${generateViolationDetails(violation)}
 `).join('\n')}
 ` : '').join('\n')}
-`;
+
+## Quick Links
+- [View Full Workflow Run and Audit Report](${workflowUrl})`;
 
   if (isPullRequest) {
     await octokit.issues.createComment({
