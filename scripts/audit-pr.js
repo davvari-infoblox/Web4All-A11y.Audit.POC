@@ -212,23 +212,68 @@ function generateViolationDetails(violation) {
   const wcagLevel = getWCAGLevel(violation.tags);
   const badge = getSeverityBadge(impact);
 
+  const affectedElements = violation.nodes.map(node => {
+    const mustPass = node.any.length ? 
+      '- **Must Pass:**\n' + node.any.map(check => '  - ' + check.message).join('\n') : '';
+    const requiredFixes = node.all.length ? 
+      '- **Required Fixes:**\n' + node.all.map(check => '  - ' + check.message).join('\n') : '';
+    
+    return `#### Element ${node.target.join(' ')}
+- **HTML:** \`${node.html}\`
+- **Impact:** ${node.impact || 'Unknown'}
+${mustPass}
+${requiredFixes}`;
+  }).join('\n\n');
+
   return `
 #### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
 - **WCAG Level:** ${wcagLevel}
-- **WCAG Success Criteria:** ${violation.tags.filter(tag => tag.startsWith('wcag')).map(tag => wcagLevelMap[tag] || tag).join(', ')}
 - **Help:** ${violation.helpUrl}
 
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
-${violation.nodes.map(node => `
-#### Element ${node.target.join(' ')}
-- **HTML:** \`${node.html}\`
-- **Impact:** ${node.impact || 'Unknown'}
-${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
-${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
-`).join('\n')}
+
+${affectedElements}
+
 </details>`;
+}
+
+async function generateFinalReport(analysisResults) {
+  const finalReport = {
+    status: 'completed',
+    timestamp: new Date().toISOString(),
+    summary: {
+      totalViolations: 0,
+      violationsByLevel: {
+        critical: 0,
+        serious: 0,
+        moderate: 0,
+        minor: 0
+      }
+    },
+    routeResults: []
+  };
+
+  for (const result of analysisResults) {
+    finalReport.routeResults.push({
+      route: result.route,
+      violations: result.violations,
+      passes: result.passes,
+      incomplete: result.incomplete,
+      inapplicable: result.inapplicable
+    });
+
+    for (const violation of result.violations) {
+      finalReport.summary.totalViolations++;
+      const level = violation.impact || 'minor';
+      finalReport.summary.violationsByLevel[level]++;
+    }
+  }
+
+  const reportPath = `audit-reports/final-report-${Date.now()}.json`;
+  await fs.writeFile(reportPath, JSON.stringify(finalReport, null, 2));
+  return reportPath;
 }
 
 async function createComment(analysisResults) {
@@ -239,6 +284,25 @@ async function createComment(analysisResults) {
     moderate: { count: 0, items: [] },
     minor: { count: 0, items: [] }
   };
+
+  // Get the current branch name and workflow run ID
+  let branchName;
+  const runId = process.env.GITHUB_RUN_ID;
+  const workflowUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+
+  if (isPullRequest) {
+    branchName = event.pull_request.head.ref;
+  } else {
+    const { data: ref } = await octokit.repos.getBranch({
+      owner,
+      repo,
+      branch: 'HEAD'
+    });
+    branchName = ref.name;
+  }
+
+  // Generate the final combined report
+  const finalReportPath = await generateFinalReport(analysisResults);
 
   for (const result of analysisResults) {
     for (const violation of result.violations) {
@@ -254,6 +318,9 @@ async function createComment(analysisResults) {
 
   const summary = `# 🔍 Accessibility Audit Report (AAA Level)
 
+## Quick Links
+- [View Full Workflow Run and Audit Report](${workflowUrl})
+
 ## Executive Summary
 ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ⚠️ Found ${totalViolations} total violations:
@@ -266,15 +333,12 @@ ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
 ## Detailed Analysis by Severity
 
 ${Object.entries(violationsByLevel).map(([level, data]) => data.items.length ? `
-#### ${getSeverityBadge(level)} Issues (${data.count})
+
 ${data.items.map(violation => `
 ### On Route: ${violation.route}
 ${generateViolationDetails(violation)}
- `).join('\n')}
- ` : '').join('\n')}
-
-## Reports
-Detailed JSON reports have been saved in the \`audit-reports\` directory.
+`).join('\n')}
+` : '').join('\n')}
 `;
 
   if (isPullRequest) {

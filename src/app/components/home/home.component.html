@@ -44,10 +44,6 @@
         <div class="product-info">
           <h3>{{ p.name }}</h3>
           <p class="price">{{ p.price | currency:'USD':'symbol' }}</p>
-          <button class="btn-secondary" (click)="navigateToProducts()" 
-                  [attr.aria-label]="'Buy ' + p.name + ' for ' + (p.price | currency:'USD':'symbol')">
-            Buy Now
-          </button>
         </div>
       </article>
     </div>
