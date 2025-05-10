@@ -1,0 +1,48 @@
+.nav-container {
+  background-color: #333;
+  padding: 1rem;
+  position: relative;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-list a {
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.nav-list a:hover,
+.nav-list a:focus {
+  background-color: #555;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.nav-list a.active {
+  background-color: #1e4b1f; /* Darkened from #2f7331 to meet 7:1 contrast ratio */
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #1e4b1f; /* Updated to match the new active link color for consistency */
+  color: white;
+  padding: 8px;
+  z-index: 100;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 0;
+}

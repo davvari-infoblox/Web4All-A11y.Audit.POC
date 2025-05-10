@@ -1,48 +1,21 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { HomeComponent } from './home/home.component';
-import { AboutComponent } from './about/about.component';
-import { ContactComponent } from './contact/contact.component';
-import { OverviewComponent } from './home/overview/overview.component';
-import { DetailsComponent } from './home/details/details.component';
-import { TeamComponent } from './about/team/team.component';
-import { MissionComponent } from './about/mission/mission.component';
-import { InfoComponent } from './contact/info/info.component';
-import { FormComponent } from './contact/form/form.component';
+import { HomeComponent } from './components/home/home.component';
+import { AboutComponent } from './components/about/about.component';
+import { ProductsComponent } from './components/products/products.component';
 
 const routes: Routes = [
-  { path: '', redirectTo: '/home', pathMatch: 'full' },
-  { 
-    path: 'home', 
-    component: HomeComponent,
-    children: [
-      { path: '', redirectTo: 'overview', pathMatch: 'full' },
-      { path: 'overview', component: OverviewComponent },
-      { path: 'details', component: DetailsComponent }
-    ]
-  },
-  { 
-    path: 'about', 
-    component: AboutComponent,
-    children: [
-      { path: '', redirectTo: 'mission', pathMatch: 'full' },
-      { path: 'mission', component: MissionComponent },
-      { path: 'team', component: TeamComponent }
-    ]
-  },
-  { 
-    path: 'contact', 
-    component: ContactComponent,
-    children: [
-      { path: '', redirectTo: 'info', pathMatch: 'full' },
-      { path: 'info', component: InfoComponent },
-      { path: 'form', component: FormComponent }
-    ]
-  }
+  { path: '', component: HomeComponent, title: 'Home - Accessible Angular Demo' },
+  { path: 'about', component: AboutComponent, title: 'About Us - Accessible Angular Demo' },
+  { path: 'products', component: ProductsComponent, title: 'Products - Accessible Angular Demo' },
+  { path: '**', redirectTo: '', pathMatch: 'full' }
 ];
 
 @NgModule({
-  imports: [RouterModule.forRoot(routes)],
+  imports: [RouterModule.forRoot(routes, {
+    scrollPositionRestoration: 'enabled',
+    anchorScrolling: 'enabled'
+  })],
   exports: [RouterModule]
 })
 export class AppRoutingModule { }

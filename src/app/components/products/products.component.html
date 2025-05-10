@@ -1,0 +1,25 @@
+<section class="products-section">
+  <h1>Our Products</h1>
+
+  <div *ngIf="loading" 
+       role="alert" 
+       aria-busy="true" 
+       class="loading-indicator">
+    <span class="visually-hidden">Loading products...</span>
+    Loading...
+  </div>
+
+  <div *ngIf="error" 
+       role="alert" 
+       class="error-message" 
+       aria-live="assertive">
+    {{error}}
+  </div>
+
+  <div *ngIf="!loading && !error" class="products-container">
+    <app-table-view 
+      [products]="products"
+      caption="Our Eco-Friendly Products">
+    </app-table-view>
+  </div>
+</section>
