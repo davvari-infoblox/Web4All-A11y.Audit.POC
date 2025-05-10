@@ -90,7 +90,7 @@ textarea:focus-visible {
 }
 
 .submit-button {
-  background-color: #2f7331; /* Darker green with contrast ratio > 4.5:1 */
+  background-color: #1e4b1f; /* Darkened from #2f7331 to meet 7:1 contrast ratio */
   color: white;
   padding: 1rem 2rem;
   border: none;
@@ -102,7 +102,7 @@ textarea:focus-visible {
 
 .submit-button:hover,
 .submit-button:focus {
-  background-color: #245d27; /* Even darker green for hover/focus state */
+  background-color: #173b18; /* Even darker green for hover/focus state */
   outline: 2px solid #333;
   outline-offset: 2px;
 }
