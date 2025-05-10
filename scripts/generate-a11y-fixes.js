@@ -25,69 +25,49 @@ async function main() {
   const baseSha = event.pull_request.base.sha;
   const headSha = event.pull_request.head.sha;
 
-  // Fetch base commit so diff works
+  // Fetch base so we can diff
   execSync(`git fetch origin ${baseSha}`, { stdio: "ignore" });
 
-  // Read reports
+  // Read audit reports
   const reportsDir = "audit-reports";
-  const reportFiles = (await fs.readdir(reportsDir)).filter(
+  const files = (await fs.readdir(reportsDir)).filter(
     (f) => f.endsWith(".json") && !f.includes("state")
   );
 
-  const suggestions = [];
-  const seen = new Set();
-
-  for (const file of reportFiles) {
+  for (const file of files) {
     const report = JSON.parse(
       await fs.readFile(path.join(reportsDir, file), "utf8")
     );
     const violations = report.details?.violations || [];
     if (!violations.length) continue;
 
-    // Get diff between base and head
+    // Diff between PR base and head
     const diffText = execSync(`git diff --no-color ${baseSha} ${headSha}`, {
       encoding: "utf-8",
     });
-    // Generate patch hunks from LLM
     const patch = await generateFixes(violations, diffText);
-
-    // Parse hunks into individual line changes
     const hunks = parseDiffHunks(patch);
+
+    // Post each change as a review comment suggestion
     for (const hunk of hunks) {
       for (const change of hunk.changes) {
         const { file: filePath, oldLine, newText } = change;
-        if (newText == null || newText.trim() === "") continue; // skip empty or null
+        if (!newText || !newText.trim()) continue;
 
-        const key = `${filePath}:${oldLine}:${newText}`;
-        if (seen.has(key)) continue; // dedupe
-        seen.add(key);
-
-        suggestions.push({
+        await octokit.pulls.createReviewComment({
+          owner,
+          repo,
+          pull_number,
+          commit_id: headSha,
           path: filePath,
+          side: "RIGHT",
           line: oldLine,
-          body: `
-\`\`\`suggestion
-${newText}
-\`\`\`
-`,
+          body: `\n\`\`\`suggestion
+${newText}\n\`\`\`\n`,
         });
+        console.log(`Posted suggestion for ${filePath}:${oldLine}`);
       }
     }
-  }
-
-  if (suggestions.length) {
-    await octokit.pulls.createReview({
-      owner,
-      repo,
-      pull_number,
-      event: "COMMENT",
-      comments: suggestions,
-    });
-    console.log(
-      `Posted ${suggestions.length} suggestions to PR #${pull_number}`
-    );
-  } else {
-    console.log("No accessibility suggestions generated.");
   }
 }
 
@@ -97,7 +77,8 @@ async function generateFixes(violations, diff) {
     messages: [
       {
         role: "system",
-        content: "Generate git-style diff hunks to fix these a11y violations.",
+        content:
+          "Generate git-style diff hunks to fix these accessibility violations.",
       },
       {
         role: "user",
