@@ -10,18 +10,7 @@
   margin: 0;
   display: flex;
   gap: 2rem;
-index 8973d73..d83900b 100644
---- a/src/app/shared/navbar/navbar.component.css
-+++ b/src/app/shared/navbar/navbar.component.css
-@@ -13,7 +13,7 @@
- }
- 
- .nav-list a {
--  color: grey;
-+  color: white;
-   text-decoration: none;
-   padding: 0.5rem 1rem;
-   border-radius: 4px;
+}
 
 .nav-list a {
   color: white;
