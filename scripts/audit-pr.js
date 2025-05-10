@@ -219,8 +219,7 @@ function generateViolationDetails(violation) {
 
 <details>
 <summary>Affected Elements (${violation.nodes.length})</summary>
-
-\`\`html
+\`\`\`html
 ${violation.nodes.map(node => `
   #### Element ${node.target.join(' ')}
   - **HTML:** \`${node.html}\`
@@ -228,7 +227,7 @@ ${violation.nodes.map(node => `
   ${node.any.length ? `- **Must Pass:** ${node.any.map(check => '  - ' + check.message).join('\n')}` : ''}
   ${node.all.length ? `- **Required Fixes:** ${node.all.map(check => '  - ' + check.message).join('\n')}` : ''}
   `).join('\n')}
-\`\`html
+\`\`\`
 
 </details>`;
 }
@@ -314,8 +313,6 @@ async function createComment(analysisResults) {
 
 ## Quick Links
 - [View Full Workflow Run](${workflowUrl})
-- [⬇️ Download Complete Report](https://github.com/${owner}/${repo}/raw/${branchName}/${finalReportPath})
-- [Browse All Reports](https://github.com/${owner}/${repo}/tree/${branchName}/audit-reports)
 
 ## Executive Summary
 ${totalViolations === 0 ? '✅ No accessibility violations found!' : `
@@ -335,10 +332,7 @@ ${data.items.map(violation => `
 ${generateViolationDetails(violation)}
 `).join('\n')}
 ` : '').join('\n')}
-
-## Reports
-
-You can browse all reports in the [audit-reports](https://github.com/${owner}/${repo}/tree/${branchName}/audit-reports) directory.`;
+`;
 
   if (isPullRequest) {
     await octokit.issues.createComment({
