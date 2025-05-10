@@ -85,10 +85,7 @@ ${h.patch.trim()}
 
 // Perform a git diff between the PR's base and head SHAs
 function getGitDiffForPR(base, head) {
-  // make sure the base commit exists
-  execSync(`git fetch origin ${base}`, { stdio: 'inherit' });
-  // now diff
-  return execSync(`git diff --no-color ${base} ${head}`, { encoding: 'utf-8' });
+  return execSync(`git diff --no-color ${base} ${head}`, { encoding: "utf-8" });
 }
 
 async function generateFixes(violations, diff) {
