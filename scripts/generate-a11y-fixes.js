@@ -51,6 +51,8 @@ async function main() {
     // Post each change as a review comment suggestion
     for (const hunk of hunks) {
       for (const change of hunk.changes) {
+        console.log("Hunk Change:", change);
+        
         const { file: filePath, oldLine, newText } = change;
         if (!newText || !newText.trim()) continue;
 
