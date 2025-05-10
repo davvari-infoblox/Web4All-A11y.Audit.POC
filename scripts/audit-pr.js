@@ -228,6 +228,7 @@ ${requiredFixes}`;
   return `
 #### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
+- **WCAG Level:** ${wcagLevel}
 - **Help:** ${violation.helpUrl}
 
 <details>
