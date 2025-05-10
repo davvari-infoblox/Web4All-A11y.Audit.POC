@@ -17,7 +17,7 @@
 }
 
 h1 {
-  color: #e0e0e0; /* Very light gray on light background - critical contrast issue */
+  color: black;
   margin-bottom: 2rem;
   font-size: 2.5rem;
   background-color: #ffffff; /* White background to emphasize poor contrast */
