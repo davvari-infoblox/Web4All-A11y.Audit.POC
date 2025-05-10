@@ -34,7 +34,13 @@ const axeConfig = {
     values: ['wcag2aaa', 'wcag21aaa', 'wcag22aa', 'best-practice']
   },
   reporter: 'v2',
-  resultTypes: ['violations']
+  resultTypes: ['violations'],
+  rules: {
+    // Explicitly enable these rules to detect our AAA issues
+    'color-contrast-enhanced': { enabled: true },
+    'image-alt': { enabled: true },
+    'button-name': { enabled: true }
+  }
 };
 
 async function discoverRoutes(page, baseUrl = 'http://localhost:4200') {
@@ -114,85 +120,105 @@ Violations: ${JSON.stringify(violations, null, 2)}`;
 
 async function auditRoute(page, route) {
   console.log(`Testing route: ${route}`);
-  await page.goto(`http://localhost:4200${route}`, { waitUntil: 'networkidle0' });
-  
-  // Inject and run axe-core using inline script since we're in ES module context
-  // Load axe directly from the imported module
-  const axeSource = axe.source;
-  
-  if (!axeSource) {   
-    // Inject axe-core script into the page
-    await page.evaluateHandle(() => {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.7.0/axe.min.js';
-        script.onload = () => resolve(true);
-        script.onerror = () => reject(new Error('Failed to load axe-core'));
-        document.head.appendChild(script);
-      });
-    });
+  try {
+    await page.goto(`http://localhost:4200${route}`, { waitUntil: 'networkidle0', timeout: 60000 });
     
-    // Wait a moment to ensure axe is fully loaded
-    await page.waitForFunction(() => typeof window.axe !== 'undefined');
-  } else {
-    // Use the imported axe source if available
-    await page.evaluate(axeSource);
-  }
-  
-  // Run axe after ensuring it's loaded
-  const results = await page.evaluate((config) => {
-    return window.axe.run(document, config);
-  },axeConfig);
-  
-  console.log(`Results for route ${route}:`, {
-    violations: results.violations.length,
-    incomplete: results.incomplete.length
-  });
-
-  // Create a more detailed report object
-  const detailedReport = {
-    status: 'completed',
-    timestamp: new Date().toISOString(),
-    route,
-    summary: {
-      violations: results.violations.length,
-      passes: results.passes.length,
-      incomplete: results.incomplete.length,
-      inapplicable: results.inapplicable.length
-    },
-    details: {
-      violations: results.violations.map(violation => ({
-        id: violation.id,
-        impact: violation.impact,
-        description: violation.description,
-        help: violation.help,
-        helpUrl: violation.helpUrl,
-        nodes: violation.nodes.map(node => ({
-          html: node.html,
-          target: node.target,
-          failureSummary: node.failureSummary
-        }))
-      })),
-      passes: results.passes,
-      incomplete: results.incomplete
+    // Add more detailed logging
+    console.log(`Successfully loaded page for route: ${route}`);
+    
+    // Inject and run axe-core using inline script since we're in ES module context
+    // Load axe directly from the imported module
+    const axeSource = axe.source;
+    
+    if (!axeSource) {   
+      // Inject axe-core script into the page
+      await page.evaluateHandle(() => {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.7.0/axe.min.js';
+          script.onload = () => resolve(true);
+          script.onerror = (err) => reject(new Error(`Failed to load axe-core: ${err}`));
+          document.head.appendChild(script);
+        });
+      });
+      
+      // Wait a moment to ensure axe is fully loaded
+      await page.waitForFunction(() => typeof window.axe !== 'undefined');
+    } else {
+      // Use the imported axe source if available
+      await page.evaluate(axeSource);
     }
-  };
-  
-  // Save detailed results to JSON file
-  const reportPath = `audit-reports/route${route.replace(/\//g, '-')}-${Date.now()}.json`;
-  await fs.mkdir('audit-reports', { recursive: true });
-  await fs.writeFile(reportPath, JSON.stringify(detailedReport, null, 2));
-  console.log(`Saved detailed report to ${reportPath}`);
-  
-  return {
-    route,
-    violations: results.violations,
-    passes: results.passes,
-    incomplete: results.incomplete,
-    inapplicable: results.inapplicable,
-    reportPath,
-    timestamp: new Date().toISOString()
-  };
+    
+    console.log('Running axe audit...');
+    
+    // Run axe after ensuring it's loaded
+    const results = await page.evaluate((config) => {
+      console.log('Axe config:', JSON.stringify(config));
+      return window.axe.run(document, config);
+    }, axeConfig);
+    
+    console.log(`Results for route ${route}:`, {
+      violations: results.violations.length,
+      incomplete: results.incomplete.length,
+      violationDetails: results.violations.map(v => ({ id: v.id, impact: v.impact }))
+    });
+
+    // Create a more detailed report object
+    const detailedReport = {
+      status: 'completed',
+      timestamp: new Date().toISOString(),
+      route,
+      summary: {
+        violations: results.violations.length,
+        passes: results.passes.length,
+        incomplete: results.incomplete.length,
+        inapplicable: results.inapplicable.length
+      },
+      details: {
+        violations: results.violations.map(violation => ({
+          id: violation.id,
+          impact: violation.impact,
+          description: violation.description,
+          help: violation.help,
+          helpUrl: violation.helpUrl,
+          nodes: violation.nodes.map(node => ({
+            html: node.html,
+            target: node.target,
+            failureSummary: node.failureSummary
+          }))
+        })),
+        passes: results.passes,
+        incomplete: results.incomplete
+      }
+    };
+    
+    // Save detailed results to JSON file
+    const reportPath = `audit-reports/route${route.replace(/\//g, '-')}-${Date.now()}.json`;
+    await fs.mkdir('audit-reports', { recursive: true });
+    await fs.writeFile(reportPath, JSON.stringify(detailedReport, null, 2));
+    console.log(`Saved detailed report to ${reportPath}`);
+    
+    return {
+      route,
+      violations: results.violations,
+      passes: results.passes,
+      incomplete: results.incomplete,
+      inapplicable: results.inapplicable,
+      reportPath,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error(`Error auditing route ${route}:`, error);
+    return {
+      route,
+      violations: [],
+      passes: [],
+      incomplete: [],
+      inapplicable: [],
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
+  }
 }
 
 function generateViolationDetails(violation) {
