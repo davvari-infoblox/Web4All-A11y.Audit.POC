@@ -43,7 +43,7 @@ const wcagLevelMap = {
 const axeConfig = {
   runOnly: {
     type: 'tag',
-    values: ['wcag2aaa', 'wcag21aaa', 'wcag22aa', 'best-practice']
+    values: ['wcag2a', 'wcag2aa', 'wcag2aaa', 'wcag21a', 'wcag21aa', 'wcag21aaa', 'wcag22aa', 'best-practice']
   },
   reporter: 'v2',
   resultTypes: ['violations']
@@ -52,7 +52,7 @@ const axeConfig = {
 async function discoverRoutes(page, baseUrl = 'http://localhost:4200') {
   // Wait for the page to load
   await page.goto(baseUrl, { waitUntil: 'networkidle0' });
-  
+
   // Gather every <a> with a routerLink or href starting "/"
   const hrefs = await page.evaluate(() => {
     const els = Array.from(document.querySelectorAll('a[routerLink], a[href^="/"]'));
@@ -61,7 +61,7 @@ async function discoverRoutes(page, baseUrl = 'http://localhost:4200') {
       .filter(h => h && !h.startsWith('http'))
       .map(h => h.split('?')[0].split('#')[0]);  // strip query/hash
   });
-  
+
   // de‑duplicate and ensure "/" prefix
   const uniqueRoutes = Array.from(new Set(hrefs.map(h => h.startsWith('/') ? h : '/' + h)));
   return uniqueRoutes;
@@ -127,12 +127,12 @@ Violations: ${JSON.stringify(violations, null, 2)}`;
 async function auditRoute(page, route) {
   console.log(`Testing route: ${route}`);
   await page.goto(`http://localhost:4200${route}`, { waitUntil: 'networkidle0' });
-  
+
   // Inject and run axe-core using inline script since we're in ES module context
   // Load axe directly from the imported module
   const axeSource = axe.source;
-  
-  if (!axeSource) {   
+
+  if (!axeSource) {
     // Inject axe-core script into the page
     await page.evaluateHandle(() => {
       return new Promise((resolve, reject) => {
@@ -143,19 +143,19 @@ async function auditRoute(page, route) {
         document.head.appendChild(script);
       });
     });
-    
+
     // Wait a moment to ensure axe is fully loaded
     await page.waitForFunction(() => typeof window.axe !== 'undefined');
   } else {
     // Use the imported axe source if available
     await page.evaluate(axeSource);
   }
-  
+
   // Run axe after ensuring it's loaded
   const results = await page.evaluate((config) => {
     return window.axe.run(document, config);
-  },axeConfig);
-  
+  }, axeConfig);
+
   console.log(`Results for route ${route}:`, {
     violations: results.violations.length,
     incomplete: results.incomplete.length
@@ -189,13 +189,13 @@ async function auditRoute(page, route) {
       incomplete: results.incomplete
     }
   };
-  
+
   // Save detailed results to JSON file
   const reportPath = `audit-reports/route${route.replace(/\//g, '-')}-${Date.now()}.json`;
   await fs.mkdir('audit-reports', { recursive: true });
   await fs.writeFile(reportPath, JSON.stringify(detailedReport, null, 2));
   console.log(`Saved detailed report to ${reportPath}`);
-  
+
   return {
     route,
     violations: results.violations,
@@ -211,7 +211,7 @@ function generateViolationDetails(violation) {
   const impact = violation.impact || 'unknown';
   const wcagLevel = getWCAGLevel(violation.tags);
   const badge = getSeverityBadge(impact);
-  
+
   return `
 #### ${badge} - ${violation.help}
 - **Rule:** \`${violation.id}\`
@@ -239,7 +239,7 @@ async function createComment(analysisResults) {
     moderate: { count: 0, items: [] },
     minor: { count: 0, items: [] }
   };
-  
+
   for (const result of analysisResults) {
     for (const violation of result.violations) {
       totalViolations++;
@@ -327,10 +327,10 @@ async function main() {
     // Discover routes using the initialized page object
     const routes = await discoverRoutes(page);
     const results = [];
-    
+
     for (const route of routes) {
       const routeComponents = route.split('/').filter(Boolean);
-      const isRouteAffected = changedFiles.some(file => 
+      const isRouteAffected = changedFiles.some(file =>
         routeComponents.some(component => file.includes(component))
       );
       const auditResult = await auditRoute(page, route);
